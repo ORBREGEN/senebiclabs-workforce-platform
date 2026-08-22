@@ -353,7 +353,7 @@ export function AnnotationWidget({
                           (option) => (
                             <label
                               key={option}
-                              className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-accent hover:bg-accent/5 transition cursor-pointer"
+                              className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-accent hover:bg-accent-light transition cursor-pointer"
                             >
                               <input
                                 type="radio"
@@ -407,7 +407,7 @@ export function AnnotationWidget({
                     )}
 
                     {field.type === "flag" && (
-                      <label className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:bg-accent/5 transition cursor-pointer">
+                      <label className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:bg-accent-light transition cursor-pointer">
                         <input
                           type="checkbox"
                           checked={formData[field.name] || false}
@@ -430,7 +430,7 @@ export function AnnotationWidget({
                             {["Yes", "No"].map((option) => (
                               <label
                                 key={option}
-                                className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-accent hover:bg-accent/5 transition cursor-pointer"
+                                className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-accent hover:bg-accent-light transition cursor-pointer"
                               >
                                 <input
                                   type="radio"
@@ -463,7 +463,7 @@ export function AnnotationWidget({
                               {(field.classes || classes)?.map((option) => (
                                 <label
                                   key={option}
-                                  className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-accent hover:bg-accent/5 transition cursor-pointer"
+                                  className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-accent hover:bg-accent-light transition cursor-pointer"
                                 >
                                   <input
                                     type="radio"
@@ -530,7 +530,7 @@ export function AnnotationWidget({
         {instructions && (
           <button
             onClick={() => setGuidelinesOpen(!guidelinesOpen)}
-            className="w-full bg-accent/10 text-accent font-semibold py-3 px-4 rounded-md mb-6 text-left flex items-center justify-between"
+            className="w-full bg-accent-light text-accent-deep font-semibold py-3 px-4 rounded-md mb-6 text-left flex items-center justify-between"
           >
             Guidelines
             <span className="text-small">{guidelinesOpen ? "−" : "+"}</span>

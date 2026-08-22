@@ -187,7 +187,7 @@ export default function DashboardPage() {
                       key={pool.id}
                       className="group"
                     >
-                      <div className="bg-surface border border-hairline rounded-lg shadow-xs hover:shadow-md hover:border-accent/40 transition h-full p-6 flex flex-col">
+                      <div className="bg-surface border border-hairline rounded-lg shadow-xs hover:shadow-md hover:border-accent transition h-full p-6 flex flex-col">
                         {/* Title + status */}
                         <div className="mb-4 flex-1">
                           <h4 className="text-h2 text-ink font-semibold group-hover:text-accent transition mb-2">
