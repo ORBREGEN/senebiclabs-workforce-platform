@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FAFBFC;
+  --surface: #FFFFFF;
+  --ink: #10233B;
+  --slate: #47566A;
+  --muted: #8492A2;
+  --hairline: #E3E8EC;
+  --accent: #0E7C74;
+  --accent-deep: #0B5E58;
+  --success: #0E9F6E;
+  --warning: #C2860B;
+  --error: #DC2626;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-smooth;
+}
+
+/* Smooth transitions */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
