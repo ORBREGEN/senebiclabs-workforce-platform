@@ -3,59 +3,63 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/AppLayout";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { PurposeBadge, StatusPill } from "@/components/ui/Pill";
 import { useAppState } from "@/components/AppState";
-import { CURRENCY } from "@/lib/design";
-import { POOLS, type PoolStatus, type Purpose } from "@/lib/seed-data";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { PurposeBadge, StatusPill } from "@/components/ui/Pill";
+import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
+import { api, type PoolStatus, type Purpose } from "@/lib/api";
+import { useAsync } from "@/lib/use-async";
 
 type PurposeFilter = Purpose | "all";
 type StatusFilter = PoolStatus | "all";
-type SortKey = "name" | "items" | "rate" | "remaining";
+type SortKey = "remaining" | "reviewed" | "items" | "name";
 
 const SORT_LABEL: Record<SortKey, string> = {
   remaining: "Most remaining",
-  rate: "Highest rate",
+  reviewed: "Most reviewed by me",
   items: "Largest pool",
   name: "Name (A–Z)",
 };
 
-const SELECT_CLASS =
+const SELECT =
   "focusable h-9 rounded-btn border border-hairline bg-surface px-3 text-[13px] text-ink transition-colors hover:bg-canvas";
 
 export default function QueuePage() {
   const router = useRouter();
   const { available } = useAppState();
+  const pools = useAsync(() => api.pools(), []);
 
   const [purpose, setPurpose] = useState<PurposeFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortKey>("remaining");
 
   const rows = useMemo(() => {
-    const filtered = POOLS.filter(
+    const filtered = (pools.data ?? []).filter(
       (p) =>
         (purpose === "all" || p.purpose === purpose) &&
         (status === "all" || p.status === status)
     );
+
+    const remaining = (p: (typeof filtered)[number]) =>
+      p.items === null ? -1 : p.items - p.reviewed_by_me;
 
     return [...filtered].sort((a, b) => {
       switch (sort) {
         case "name":
           return a.name.localeCompare(b.name);
         case "items":
-          return b.items - a.items;
-        case "rate":
-          return b.hourlyRate - a.hourlyRate;
+          return (b.items ?? 0) - (a.items ?? 0);
+        case "reviewed":
+          return b.reviewed_by_me - a.reviewed_by_me;
         case "remaining":
-          return b.items - b.reviewed - (a.items - a.reviewed);
+          return remaining(b) - remaining(a);
       }
     });
-  }, [purpose, status, sort]);
+  }, [pools.data, purpose, status, sort]);
 
+  const total = pools.data?.length ?? 0;
   const filtersActive = purpose !== "all" || status !== "all";
-
   const clearFilters = () => {
     setPurpose("all");
     setStatus("all");
@@ -63,161 +67,186 @@ export default function QueuePage() {
 
   return (
     <AppLayout title="Review queue">
-      {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <label className="sr-only" htmlFor="purpose-filter">
-          Filter by purpose
-        </label>
-        <select
-          id="purpose-filter"
-          className={SELECT_CLASS}
-          value={purpose}
-          onChange={(e) => setPurpose(e.target.value as PurposeFilter)}
-        >
-          <option value="all">All purposes</option>
-          <option value="evaluate">Evaluate</option>
-          <option value="label">Label</option>
-          <option value="create">Create</option>
-        </select>
+      {pools.loading && (
+        <div role="status" aria-live="polite">
+          <span className="sr-only">Loading your pools</span>
+          <Skeleton className="h-11 w-full max-w-md" />
+          <Skeleton className="mt-4 h-72 w-full" />
+        </div>
+      )}
 
-        <label className="sr-only" htmlFor="status-filter">
-          Filter by status
-        </label>
-        <select
-          id="status-filter"
-          className={SELECT_CLASS}
-          value={status}
-          onChange={(e) => setStatus(e.target.value as StatusFilter)}
-        >
-          <option value="all">All statuses</option>
-          <option value="in_progress">In progress</option>
-          <option value="delivered">Delivered</option>
-          <option value="awaiting_review">Awaiting review</option>
-        </select>
+      {!pools.loading && pools.error && (
+        <ErrorState message={pools.error} onRetry={pools.reload} />
+      )}
 
-        <label className="sr-only" htmlFor="sort-order">
-          Sort by
-        </label>
-        <select
-          id="sort-order"
-          className={`${SELECT_CLASS} ml-auto`}
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortKey)}
-        >
-          {(Object.keys(SORT_LABEL) as SortKey[]).map((key) => (
-            <option key={key} value={key}>
-              Sort: {SORT_LABEL[key]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {rows.length === 0 ? (
+      {!pools.loading && !pools.error && total === 0 && (
         <EmptyState
-          title="No pools match these filters"
-          body="Nothing in the queue fits that combination right now. Clear the filters to see everything you're eligible for."
-          action={<Button onClick={clearFilters}>Clear filters</Button>}
+          title="No pools yet"
+          body="You become eligible for a pool by passing its calibration. Anything open to you will be listed there."
+          action={
+            <Button onClick={() => router.push("/calibration")}>
+              Go to calibration
+            </Button>
+          }
         />
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[840px] border-collapse text-left">
-              <caption className="sr-only">
-                Pools you are eligible to review
-              </caption>
-              <thead>
-                <tr className="border-b border-hairline bg-canvas">
-                  <th scope="col" className="px-5 py-3 text-label uppercase text-muted">
-                    Pool
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-label uppercase text-muted">
-                    Purpose
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right text-label uppercase text-muted">
-                    Items
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right text-label uppercase text-muted">
-                    Pay rate
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-label uppercase text-muted">
-                    Status
-                  </th>
-                  <th scope="col" className="px-5 py-3">
-                    <span className="sr-only">Action</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((pool) => {
-                  const complete = pool.reviewed >= pool.items;
-                  return (
-                    <tr
-                      key={pool.id}
-                      className="border-b border-hairline last:border-b-0 transition-colors hover:bg-canvas"
-                    >
-                      <th scope="row" className="max-w-[320px] px-5 py-4 font-normal">
-                        <span className="block text-body font-medium text-ink">
-                          {pool.name}
-                        </span>
-                        <span className="tnum mt-0.5 block text-[12px] text-muted">
-                          {pool.reviewed.toLocaleString()} of{" "}
-                          {pool.items.toLocaleString()} reviewed
-                        </span>
-                      </th>
-                      <td className="px-4 py-4">
-                        <PurposeBadge purpose={pool.purpose} />
-                      </td>
-                      <td className="tnum px-4 py-4 text-right text-body text-ink">
-                        {pool.items.toLocaleString()}
-                      </td>
-                      <td className="tnum px-4 py-4 text-right text-body text-ink">
-                        {CURRENCY.format(pool.hourlyRate)}
-                        <span className="text-muted"> / hr</span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <StatusPill status={pool.status} />
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={!available || complete}
-                          onClick={() =>
-                            router.push(`/workspace?pool=${pool.id}`)
-                          }
-                        >
-                          {complete
-                            ? "Fully reviewed"
-                            : pool.reviewed > 0
-                              ? "Resume reviewing"
-                              : "Start reviewing"}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      )}
+
+      {!pools.loading && !pools.error && total > 0 && (
+        <>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="purpose-filter">
+              Filter by purpose
+            </label>
+            <select
+              id="purpose-filter"
+              className={SELECT}
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value as PurposeFilter)}
+            >
+              <option value="all">All purposes</option>
+              <option value="evaluate">Evaluate</option>
+              <option value="label">Label</option>
+              <option value="create">Create</option>
+            </select>
+
+            <label className="sr-only" htmlFor="status-filter">
+              Filter by status
+            </label>
+            <select
+              id="status-filter"
+              className={SELECT}
+              value={status}
+              onChange={(e) => setStatus(e.target.value as StatusFilter)}
+            >
+              <option value="all">All statuses</option>
+              <option value="not_started">Not started</option>
+              <option value="in_progress">In progress</option>
+              <option value="complete">Complete</option>
+            </select>
+
+            <label className="sr-only" htmlFor="sort-order">
+              Sort by
+            </label>
+            <select
+              id="sort-order"
+              className={`${SELECT} ml-auto`}
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+            >
+              {(Object.keys(SORT_LABEL) as SortKey[]).map((key) => (
+                <option key={key} value={key}>
+                  Sort: {SORT_LABEL[key]}
+                </option>
+              ))}
+            </select>
           </div>
-        </Card>
-      )}
 
-      {!available && rows.length > 0 && (
-        <p className="mt-4 text-[13px] text-muted">
-          Turn on availability to start reviewing.
-        </p>
-      )}
+          {rows.length === 0 ? (
+            <EmptyState
+              title="No pools match these filters"
+              body="Nothing in your queue fits that combination. Clear the filters to see everything open to you."
+              action={<Button onClick={clearFilters}>Clear filters</Button>}
+            />
+          ) : (
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] border-collapse text-left">
+                  <caption className="sr-only">Pools you are eligible for</caption>
+                  <thead>
+                    <tr className="border-b border-hairline bg-canvas">
+                      <th scope="col" className="px-5 py-3 text-label uppercase text-muted">
+                        Pool
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-label uppercase text-muted">
+                        Purpose
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-right text-label uppercase text-muted">
+                        Items
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-right text-label uppercase text-muted">
+                        Reviewed by me
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-label uppercase text-muted">
+                        Status
+                      </th>
+                      <th scope="col" className="px-5 py-3">
+                        <span className="sr-only">Action</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((pool) => {
+                      const complete = pool.status === "complete";
+                      return (
+                        <tr
+                          key={pool.id}
+                          className="border-b border-hairline transition-colors last:border-b-0 hover:bg-canvas"
+                        >
+                          <th scope="row" className="max-w-[320px] px-5 py-4 font-normal">
+                            <span className="block text-body font-medium text-ink">
+                              {pool.name}
+                            </span>
+                            {pool.description && (
+                              <span className="mt-0.5 block text-[12px] text-muted">
+                                {pool.description}
+                              </span>
+                            )}
+                          </th>
+                          <td className="px-4 py-4">
+                            <PurposeBadge purpose={pool.purpose} />
+                          </td>
+                          <td className="tnum px-4 py-4 text-right text-body text-ink">
+                            {pool.items === null ? "—" : pool.items.toLocaleString()}
+                          </td>
+                          <td className="tnum px-4 py-4 text-right text-body text-ink">
+                            {pool.reviewed_by_me.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-4">
+                            <StatusPill status={pool.status} />
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={!available || complete}
+                              onClick={() =>
+                                router.push(`/workspace?pool=${pool.id}`)
+                              }
+                            >
+                              {complete
+                                ? "Fully reviewed"
+                                : pool.reviewed_by_me > 0
+                                  ? "Resume reviewing"
+                                  : "Start reviewing"}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
 
-      {filtersActive && rows.length > 0 && (
-        <p className="tnum mt-4 text-[13px] text-muted">
-          Showing {rows.length} of {POOLS.length} pools.{" "}
-          <button
-            onClick={clearFilters}
-            className="focusable rounded-btn font-medium text-accent underline-offset-2 hover:underline"
-          >
-            Clear filters
-          </button>
-        </p>
+          {!available && rows.length > 0 && (
+            <p className="mt-4 text-[13px] text-muted">
+              Turn on availability to start reviewing.
+            </p>
+          )}
+
+          {filtersActive && rows.length > 0 && (
+            <p className="tnum mt-4 text-[13px] text-muted">
+              Showing {rows.length} of {total} pools.{" "}
+              <button
+                onClick={clearFilters}
+                className="focusable rounded-btn font-medium text-accent underline-offset-2 hover:underline"
+              >
+                Clear filters
+              </button>
+            </p>
+          )}
+        </>
       )}
     </AppLayout>
   );

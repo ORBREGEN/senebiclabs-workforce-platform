@@ -3,61 +3,54 @@
 import { useRouter } from "next/navigation";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
-import { PurposeBadge } from "./ui/Pill";
+import { PurposeBadge, StatusPill } from "./ui/Pill";
 import { useAppState } from "./AppState";
-import type { Pool } from "@/lib/seed-data";
+import type { Pool } from "@/lib/api";
 
 export function PoolCard({ pool }: { pool: Pool }) {
   const router = useRouter();
   const { available } = useAppState();
 
-  const started = pool.reviewed > 0;
-  const complete = pool.reviewed >= pool.items;
+  const complete = pool.status === "complete";
+  const started = pool.reviewed_by_me > 0;
+  const progress =
+    pool.items && pool.items > 0
+      ? Math.min((pool.reviewed_by_me / pool.items) * 100, 100)
+      : null;
 
   return (
-    <Card interactive={available} className="relative flex flex-col p-5">
-      <div className="mb-4">
+    <Card interactive={available && !complete} className="relative flex flex-col p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <PurposeBadge purpose={pool.purpose} />
+        <StatusPill status={pool.status} />
       </div>
 
       <h3 className="text-section text-ink">{pool.name}</h3>
-      <p className="mt-1.5 text-body text-muted">{pool.description}</p>
+      {pool.description && (
+        <p className="mt-1.5 text-body text-muted">{pool.description}</p>
+      )}
 
-      <dl className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[13px]">
-        <div>
-          <dt className="sr-only">Rate</dt>
-          <dd className="font-medium text-ink">Professional rate</dd>
-        </div>
-        <div>
-          <dt className="sr-only">Typical time per review</dt>
-          <dd className="tnum text-muted">~{pool.minutesPerReview} min</dd>
-        </div>
-        <div>
-          <dt className="sr-only">Items in pool</dt>
-          <dd className="tnum text-muted">{pool.items.toLocaleString()} items</dd>
-        </div>
-      </dl>
-
-      <div className="mt-4 border-t border-hairline pt-4">
-        {started && (
+      <div className="mt-auto pt-4">
+        {progress !== null && started && (
           <div
             className="mb-3 h-1 w-full overflow-hidden rounded-full bg-hairline"
             role="progressbar"
-            aria-valuenow={pool.reviewed}
+            aria-valuenow={pool.reviewed_by_me}
             aria-valuemin={0}
-            aria-valuemax={pool.items}
-            aria-label={`${pool.reviewed} of ${pool.items} reviewed`}
+            aria-valuemax={pool.items ?? undefined}
+            aria-label={`${pool.reviewed_by_me} of ${pool.items} reviewed`}
           >
             <div
               className="h-full rounded-full bg-accent"
-              style={{ width: `${(pool.reviewed / pool.items) * 100}%` }}
+              style={{ width: `${progress}%` }}
             />
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 border-t border-hairline pt-4">
           <span className="tnum text-[13px] text-muted">
-            {pool.reviewed.toLocaleString()} reviewed
+            {pool.reviewed_by_me.toLocaleString()} reviewed
+            {pool.items !== null && ` of ${pool.items.toLocaleString()}`}
           </span>
           <Button
             size="sm"
@@ -73,8 +66,8 @@ export function PoolCard({ pool }: { pool: Pool }) {
         </div>
       </div>
 
-      {!available && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-card bg-surface/80 px-4 text-center">
+      {!available && !complete && (
+        <div className="absolute inset-0 flex items-center justify-center rounded-card bg-surface/85 px-4 text-center">
           <p className="text-[13px] font-medium text-muted">
             Turn on availability to start reviewing.
           </p>

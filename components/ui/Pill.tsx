@@ -1,6 +1,5 @@
 import React from "react";
-import type { Purpose, PoolStatus } from "@/lib/seed-data";
-import { PURPOSE_LABEL, STATUS_LABEL } from "@/lib/seed-data";
+import type { PoolStatus, Purpose } from "@/lib/api";
 
 type Tone = "accent" | "success" | "info" | "warning" | "neutral";
 
@@ -36,14 +35,26 @@ const PURPOSE_TONE: Record<Purpose, Tone> = {
   create: "warning",
 };
 
+const PURPOSE_LABEL: Record<Purpose, string> = {
+  evaluate: "Evaluate",
+  label: "Label",
+  create: "Create",
+};
+
 export function PurposeBadge({ purpose }: { purpose: Purpose }) {
   return <Pill tone={PURPOSE_TONE[purpose]}>{PURPOSE_LABEL[purpose]}</Pill>;
 }
 
 const STATUS_TONE: Record<PoolStatus, Tone> = {
+  not_started: "neutral",
   in_progress: "accent",
-  delivered: "success",
-  awaiting_review: "info",
+  complete: "success",
+};
+
+const STATUS_LABEL: Record<PoolStatus, string> = {
+  not_started: "Not started",
+  in_progress: "In progress",
+  complete: "Complete",
 };
 
 export function StatusPill({ status }: { status: PoolStatus }) {

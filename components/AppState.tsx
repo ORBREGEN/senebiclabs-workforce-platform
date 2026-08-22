@@ -1,13 +1,18 @@
 "use client";
 
 import React, { createContext, useContext, useMemo, useState } from "react";
+import { api, type Me } from "@/lib/api";
+import { useAsync } from "@/lib/use-async";
 
 interface AppState {
+  /** null while loading, or if the session could not be resolved. */
+  me: Me | null;
+  meLoading: boolean;
+  /** Local preference. Not persisted — there is no endpoint behind it yet. */
   available: boolean;
   setAvailable: (next: boolean) => void;
   reviewedThisSession: number;
   countReview: () => void;
-  unreadNotifications: number;
   toast: string | null;
   showToast: (message: string) => void;
 }
@@ -15,24 +20,26 @@ interface AppState {
 const Ctx = createContext<AppState | null>(null);
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
+  const { data: me, loading: meLoading } = useAsync(() => api.me(), []);
   const [available, setAvailable] = useState(true);
   const [reviewedThisSession, setReviewed] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
 
   const value = useMemo<AppState>(
     () => ({
+      me,
+      meLoading,
       available,
       setAvailable,
       reviewedThisSession,
       countReview: () => setReviewed((n) => n + 1),
-      unreadNotifications: 3,
       toast,
       showToast: (message: string) => {
         setToast(message);
         window.setTimeout(() => setToast(null), 4000);
       },
     }),
-    [available, reviewedThisSession, toast]
+    [me, meLoading, available, reviewedThisSession, toast]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

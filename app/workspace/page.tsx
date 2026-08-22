@@ -5,47 +5,45 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Flag } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAppState } from "@/components/AppState";
-import { ReviewField, type Answer } from "@/components/ReviewField";
+import { ReviewField, isVisible, type Answers } from "@/components/ReviewField";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { PurposeBadge } from "@/components/ui/Pill";
-import { POOLS, poolById, tasksForPool } from "@/lib/seed-data";
+import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
+import { ApiError, NO_CONTENT, api, type Task } from "@/lib/api";
 
-/** In-progress answers survive a refresh. Nothing sensitive is stored. */
+/** Answers survive a refresh. Only answers — never the session. */
 const draftKey = (taskId: number) => `senebiclabs:draft:${taskId}`;
 
-function Guidelines({
-  sections,
-}: {
-  sections: { heading: string; body: string }[];
-}) {
+function readDraft(taskId: number): Answers {
+  try {
+    const raw = window.localStorage.getItem(draftKey(taskId));
+    return raw ? (JSON.parse(raw) as Answers) : {};
+  } catch {
+    return {};
+  }
+}
+
+function Guidelines({ instructions }: { instructions: string }) {
   const [open, setOpen] = useState(false);
 
   const body = (
-    <div className="space-y-5">
-      {sections.map((s) => (
-        <div key={s.heading}>
-          <h3 className="text-[13px] font-semibold text-ink">{s.heading}</h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-muted">{s.body}</p>
-        </div>
-      ))}
-    </div>
+    <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-muted">
+      {instructions}
+    </p>
   );
 
   return (
     <>
-      {/* Desktop: always-visible sidebar */}
       <aside className="hidden lg:block">
         <Card className="sticky top-24 p-5">
-          <h2 className="mb-4 text-label uppercase text-muted">
+          <h2 className="mb-3 text-label uppercase text-muted">
             Review guidelines
           </h2>
           {body}
         </Card>
       </aside>
 
-      {/* Mobile: accordion above the work */}
       <div className="lg:hidden">
         <Card className="overflow-hidden">
           <button
@@ -60,9 +58,7 @@ function Guidelines({
             <ChevronDown
               size={16}
               aria-hidden="true"
-              className={`text-muted transition-transform duration-150 ${
-                open ? "rotate-180" : ""
-              }`}
+              className={`text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`}
             />
           </button>
           {open && (
@@ -77,110 +73,161 @@ function Guidelines({
 function Workspace() {
   const router = useRouter();
   const params = useSearchParams();
+  const poolId = params.get("pool");
   const { countReview, showToast } = useAppState();
 
-  const poolId = params.get("pool") ?? POOLS[0].id;
-  const pool = poolById(poolId);
-  const tasks = useMemo(() => tasksForPool(poolId), [poolId]);
-
-  const [index, setIndex] = useState(0);
-  const [answer, setAnswer] = useState<Answer>({});
+  const [task, setTask] = useState<Task | null>(null);
+  const [answers, setAnswers] = useState<Answers>({});
+  const [loading, setLoading] = useState(true);
+  const [drained, setDrained] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [missing, setMissing] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const task = tasks[index];
-
-  // Restore any draft for this task.
-  useEffect(() => {
-    if (!task) return;
+  /** Adopt a task and restore whatever was typed against it before. */
+  const adopt = useCallback((next: Task | null) => {
     setMissing([]);
-    try {
-      const saved = window.localStorage.getItem(draftKey(task.id));
-      setAnswer(saved ? (JSON.parse(saved) as Answer) : {});
-    } catch {
-      setAnswer({});
+    setSubmitError(null);
+    if (!next) {
+      setTask(null);
+      setAnswers({});
+      setDrained(true);
+      return;
     }
-  }, [task]);
-
-  // Keep the draft current as they type.
-  useEffect(() => {
-    if (!task) return;
-    try {
-      window.localStorage.setItem(draftKey(task.id), JSON.stringify(answer));
-    } catch {
-      /* storage unavailable — the in-memory answer still stands */
-    }
-  }, [answer, task]);
-
-  const update = useCallback((key: string, value: string | number) => {
-    setAnswer((prev) => ({ ...prev, [key]: value }));
-    setMissing((prev) => prev.filter((m) => m !== key));
+    setTask(next);
+    setAnswers(readDraft(next.task_id));
   }, []);
 
-  const advance = useCallback(() => {
-    if (task) {
-      try {
-        window.localStorage.removeItem(draftKey(task.id));
-      } catch {
-        /* nothing to clean up */
+  const load = useCallback(async () => {
+    if (!poolId) return;
+    setLoading(true);
+    setLoadError(null);
+    setDrained(false);
+    try {
+      const result = await api.nextTask(poolId);
+      adopt(result === NO_CONTENT ? null : (result as Task));
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError ? err.message : "Something went wrong."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [poolId, adopt]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Persist as they type, so nothing is lost to a refresh or a stray back.
+  useEffect(() => {
+    if (!task) return;
+    try {
+      window.localStorage.setItem(draftKey(task.task_id), JSON.stringify(answers));
+    } catch {
+      /* storage unavailable; the in-memory answers still stand */
+    }
+  }, [answers, task]);
+
+  const clearDraft = (taskId: number) => {
+    try {
+      window.localStorage.removeItem(draftKey(taskId));
+    } catch {
+      /* nothing to clean up */
+    }
+  };
+
+  const update = useCallback((key: string, value: unknown) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+    setMissing((prev) => prev.filter((m) => m !== key && m !== `${key}_finding`));
+  }, []);
+
+  const visibleFields = useMemo(
+    () => (task?.eval_config.fields ?? []).filter((f) => isVisible(f, answers)),
+    [task, answers]
+  );
+
+  const submit = useCallback(async () => {
+    if (!task || busy) return;
+
+    const gaps: string[] = [];
+    for (const field of visibleFields) {
+      const value = answers[field.name];
+      if (field.required && (value === undefined || value === "")) {
+        gaps.push(field.name);
+      }
+      if (field.type === "structured" && value === "Yes") {
+        if (!answers[`${field.name}_finding`]) gaps.push(`${field.name}_finding`);
       }
     }
-    setIndex((i) => i + 1);
-  }, [task]);
-
-  const submit = useCallback(() => {
-    if (!task || submitting) return;
-
-    const gaps = task.fields
-      .filter((f) => f.required && !answer[f.name])
-      .map((f) => f.name);
-
-    // A structured field answered "Yes" needs its finding named.
-    task.fields.forEach((f) => {
-      if (f.type === "structured" && answer[f.name] === "Yes") {
-        if (!answer[`${f.name}_finding`]) gaps.push(`${f.name}_finding`);
-      }
-    });
 
     if (gaps.length > 0) {
       setMissing(gaps);
-      const el = document.getElementById(`field-${gaps[0].split("_")[0]}`);
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setSubmitError(null);
+      document
+        .getElementById(`field-${gaps[0].replace(/_finding$/, "")}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
-    setSubmitting(true);
-    window.setTimeout(() => {
+    setBusy(true);
+    setSubmitError(null);
+    const submittedId = task.task_id;
+
+    try {
+      const { next } = await api.submit(submittedId, answers);
+      clearDraft(submittedId);
       countReview();
-      showToast(`Review submitted — case ${task.caseId}`);
-      advance();
-      setSubmitting(false);
-    }, 260);
-  }, [task, answer, submitting, countReview, showToast, advance]);
+      showToast("Review submitted");
+      adopt(next);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      // Answers stay exactly where they are — the draft is untouched.
+      setSubmitError(
+        err instanceof ApiError ? err.message : "We could not save your review."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }, [task, busy, visibleFields, answers, countReview, showToast, adopt]);
 
-  const flag = useCallback(() => {
-    if (!task) return;
-    showToast(`Flagged case ${task.caseId} for a second clinician`);
-    advance();
-  }, [task, showToast, advance]);
+  const flag = useCallback(async () => {
+    if (!task || busy) return;
+    setBusy(true);
+    setSubmitError(null);
+    const flaggedId = task.task_id;
 
-  // Cmd/Ctrl+Enter submits.
+    try {
+      await api.flag(flaggedId, "Unclear or outside my area");
+      clearDraft(flaggedId);
+      showToast("Flagged for another clinician");
+      await load();
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiError ? err.message : "We could not record that flag."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }, [task, busy, showToast, load]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        submit();
+        void submit();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [submit]);
 
-  if (!pool) {
+  if (!poolId) {
     return (
       <EmptyState
-        title="That pool is not on your list"
-        body="It may have closed, or you may not be eligible for it yet. Your review queue has everything currently open to you."
+        title="No pool selected"
+        body="Open a pool from your review queue to start working through it."
         action={
           <Button onClick={() => router.push("/queue")}>
             Go to review queue
@@ -190,67 +237,82 @@ function Workspace() {
     );
   }
 
-  if (!task) {
+  if (loading) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]"
+      >
+        <span className="sr-only">Loading the next case</span>
+        <div className="space-y-5">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-72" />
+        </div>
+        <Skeleton className="hidden h-80 lg:block" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return <ErrorState message={loadError} onRetry={load} />;
+  }
+
+  if (drained || !task) {
     return (
       <EmptyState
-        title="You've reviewed every case in this pool"
-        body="More cases are added most weekdays. Your queue has other pools open right now."
+        title="You're all caught up"
+        body="Every case open to you in this pool has been reviewed. More arrive as they are added."
         action={
           <Button onClick={() => router.push("/queue")}>
-            Go to review queue
+            Back to review queue
           </Button>
         }
       />
     );
   }
+
+  const { instructions, classes } = task.eval_config;
 
   return (
     <>
-      {/* Case header */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <PurposeBadge purpose={pool.purpose} />
-          <span className="text-body font-medium text-ink">{pool.name}</span>
+          <PurposeBadge purpose={task.pool.purpose} />
+          <span className="text-body font-medium text-ink">{task.pool.name}</span>
         </div>
         <span className="tnum text-[13px] text-muted">
-          Case {task.caseId} · {index + 1} of {tasks.length} this batch
+          {task.case_id ? `Case ${task.case_id} · ` : ""}
+          {task.already_reviewed_count.toLocaleString()} reviewed in this pool
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-        {/* Main column */}
         <div className="min-w-0 space-y-5">
-          <div className="lg:hidden">
-            <Guidelines sections={task.guidelines} />
-          </div>
+          {instructions && (
+            <div className="lg:hidden">
+              <Guidelines instructions={instructions} />
+            </div>
+          )}
 
-          {/* Context */}
-          {task.context.map((block) => (
-            <Card
-              key={block.label}
-              className={`p-5 ${
-                block.emphasis ? "border-l-[3px] border-l-accent" : ""
-              }`}
-            >
+          {task.context.map((block, i) => (
+            <Card key={`${block.label}-${i}`} className="p-5">
               <h2 className="mb-2 text-label uppercase text-muted">
                 {block.label}
               </h2>
-              <p
-                className={`whitespace-pre-wrap text-body leading-relaxed ${
-                  block.emphasis ? "text-ink" : "text-muted"
-                }`}
-              >
-                {block.content}
+              <p className="whitespace-pre-wrap text-body leading-relaxed text-ink">
+                {block.value}
               </p>
             </Card>
           ))}
 
-          {/* Fields */}
           <Card className="p-5">
             <h2 className="text-section text-ink">Your assessment</h2>
             <p className="mt-1 text-body text-muted">
-              {task.fields.length} fields. Your answers are kept if you step
-              away.
+              {visibleFields.length}{" "}
+              {visibleFields.length === 1 ? "field" : "fields"}. Your answers are
+              kept if you step away.
             </p>
 
             {missing.length > 0 && (
@@ -267,12 +329,27 @@ function Workspace() {
               </div>
             )}
 
+            {submitError && (
+              <div
+                role="alert"
+                className="mt-4 rounded-card border border-danger bg-danger-soft px-4 py-3"
+              >
+                <p className="text-[13px] font-medium text-danger">
+                  {submitError}
+                </p>
+                <p className="mt-1 text-[12px] text-danger">
+                  Nothing was lost — your answers are still below.
+                </p>
+              </div>
+            )}
+
             <div className="mt-6 space-y-8">
-              {task.fields.map((field) => (
+              {visibleFields.map((field) => (
                 <div key={field.name} id={`field-${field.name}`}>
                   <ReviewField
                     field={field}
-                    answer={answer}
+                    answers={answers}
+                    poolClasses={classes}
                     onChange={update}
                     invalid={
                       missing.includes(field.name) ||
@@ -285,13 +362,13 @@ function Workspace() {
           </Card>
         </div>
 
-        {/* Guidelines sidebar */}
-        <div className="hidden lg:block">
-          <Guidelines sections={task.guidelines} />
-        </div>
+        {instructions && (
+          <div className="hidden lg:block">
+            <Guidelines instructions={instructions} />
+          </div>
+        )}
       </div>
 
-      {/* Sticky action bar */}
       <div className="sticky bottom-0 z-10 -mx-5 mt-6 border-t border-hairline bg-surface/95 px-5 py-3 backdrop-blur lg:-mx-8 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-[12px] text-muted">
@@ -306,11 +383,11 @@ function Workspace() {
             to submit
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={flag}>
+            <Button variant="secondary" onClick={flag} disabled={busy}>
               <Flag size={14} aria-hidden="true" />
               Flag — unclear
             </Button>
-            <Button onClick={submit} loading={submitting}>
+            <Button onClick={submit} loading={busy}>
               Submit review
             </Button>
           </div>
@@ -327,10 +404,10 @@ export default function WorkspacePage() {
         fallback={
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
             <div className="space-y-5">
-              <div className="h-32 animate-pulse-soft rounded-card bg-hairline" />
-              <div className="h-64 animate-pulse-soft rounded-card bg-hairline" />
+              <Skeleton className="h-28" />
+              <Skeleton className="h-72" />
             </div>
-            <div className="hidden h-80 animate-pulse-soft rounded-card bg-hairline lg:block" />
+            <Skeleton className="hidden h-80 lg:block" />
           </div>
         }
       >

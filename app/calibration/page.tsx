@@ -1,24 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { Card, SectionHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { Card, SectionHeading } from "@/components/ui/Card";
 import { Pill, PurposeBadge } from "@/components/ui/Pill";
-import { useAppState } from "@/components/AppState";
-import { formatDate } from "@/lib/design";
-import { CALIBRATION_POOLS, type CalibrationPool } from "@/lib/seed-data";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingBlock,
+} from "@/components/ui/States";
+import { api, type CalibrationPool } from "@/lib/api";
+import { useAsync } from "@/lib/use-async";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 function CalibrationCard({ pool }: { pool: CalibrationPool }) {
-  const { showToast } = useAppState();
+  const router = useRouter();
+  const passed = pool.status === "passed";
 
   return (
-    <Card interactive className="flex flex-col p-5">
+    <Card className="flex flex-col p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <PurposeBadge purpose={pool.purpose} />
-        {pool.status === "passed" && (
+        {passed && (
           <Pill tone="success">
             <CheckCircle2 size={12} aria-hidden="true" />
             Eligible
@@ -27,71 +39,38 @@ function CalibrationCard({ pool }: { pool: CalibrationPool }) {
       </div>
 
       <h3 className="text-section text-ink">{pool.name}</h3>
-      <p className="mt-1.5 flex-1 text-body text-muted">{pool.description}</p>
+      {pool.description && (
+        <p className="mt-1.5 flex-1 text-body text-muted">{pool.description}</p>
+      )}
 
-      <div className="mt-4 border-t border-hairline pt-4">
-        {pool.status === "passed" && (
-          <div className="flex items-center justify-between gap-3">
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-hairline pt-4">
+        {passed ? (
+          <>
             <span className="text-[13px] text-muted">
-              Passed {formatDate(pool.passedOn!)}
+              {pool.passed_at ? `Passed ${formatDate(pool.passed_at)}` : "Passed"}
             </span>
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => showToast(`Reviewing your ${pool.name} answers`)}
+              onClick={() => router.push(`/workspace?pool=${pool.id}`)}
             >
-              Review answers
+              Start reviewing
             </Button>
-          </div>
-        )}
-
-        {pool.status === "in_progress" && (
-          <>
-            <div className="mb-3">
-              <div className="mb-1.5 flex items-baseline justify-between">
-                <span className="tnum text-[13px] font-medium text-ink">
-                  {pool.answered} of {pool.itemCount} answered
-                </span>
-              </div>
-              <div
-                className="h-1 w-full overflow-hidden rounded-full bg-hairline"
-                role="progressbar"
-                aria-valuenow={pool.answered}
-                aria-valuemin={0}
-                aria-valuemax={pool.itemCount}
-                aria-label={`${pool.answered} of ${pool.itemCount} answered`}
-              >
-                <div
-                  className="h-full rounded-full bg-accent"
-                  style={{
-                    width: `${((pool.answered ?? 0) / pool.itemCount) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                onClick={() => showToast(`Resuming ${pool.name} calibration`)}
-              >
-                Resume calibration
-              </Button>
-            </div>
           </>
-        )}
-
-        {pool.status === "not_attempted" && (
-          <div className="flex items-center justify-between gap-3">
+        ) : (
+          <>
             <span className="tnum text-[13px] text-muted">
-              {pool.itemCount} items
+              {pool.item_count} {pool.item_count === 1 ? "item" : "items"}
+              {pool.attempts > 0 &&
+                ` · ${pool.attempts} ${pool.attempts === 1 ? "attempt" : "attempts"}`}
             </span>
             <Button
               size="sm"
-              onClick={() => showToast(`Starting ${pool.name} calibration`)}
+              onClick={() => router.push(`/calibration/${pool.id}`)}
             >
-              Start calibration
+              {pool.attempts > 0 ? "Try again" : "Start calibration"}
             </Button>
-          </div>
+          </>
         )}
       </div>
     </Card>
@@ -99,11 +78,10 @@ function CalibrationCard({ pool }: { pool: CalibrationPool }) {
 }
 
 export default function CalibrationPage() {
-  const [tab, setTab] = useState<"available" | "passed">("available");
+  const calibrations = useAsync(() => api.calibrations(), []);
 
-  const passed = CALIBRATION_POOLS.filter((p) => p.status === "passed");
-  const available = CALIBRATION_POOLS.filter((p) => p.status !== "passed");
-  const shown = tab === "passed" ? passed : available;
+  const passed = (calibrations.data ?? []).filter((p) => p.status === "passed");
+  const open = (calibrations.data ?? []).filter((p) => p.status !== "passed");
 
   return (
     <AppLayout title="Calibration">
@@ -112,60 +90,46 @@ export default function CalibrationPage() {
         <p className="mt-1.5 max-w-2xl text-body text-muted">
           Each calibration is a short set of cases with known answers, written by
           the clinical leads for that pool. Pass it and you are eligible to
-          review that pool — there is nothing else to unlock. You can retake a
-          calibration whenever the rubric is updated.
+          review that pool — there is nothing else to unlock.
         </p>
       </Card>
 
-      <div className="mb-4 flex items-center gap-1" role="tablist">
-        {(["available", "passed"] as const).map((key) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={`focusable rounded-btn px-3 py-1.5 text-[13px] font-medium transition-colors ${
-              tab === key
-                ? "bg-accent-soft text-accent"
-                : "text-muted hover:bg-canvas hover:text-ink"
-            }`}
-          >
-            {key === "available" ? "Available" : "Passed"}
-            <span className="tnum ml-1.5 text-muted">
-              {key === "available" ? available.length : passed.length}
-            </span>
-          </button>
-        ))}
-      </div>
+      {calibrations.loading && <LoadingBlock label="Loading calibrations" />}
 
-      <SectionHeading>
-        {tab === "available"
-          ? "Calibrations you can take"
-          : "Pools you are eligible for"}
-      </SectionHeading>
+      {!calibrations.loading && calibrations.error && (
+        <ErrorState
+          message={calibrations.error}
+          onRetry={calibrations.reload}
+        />
+      )}
 
-      {shown.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {shown.map((pool) => (
-            <CalibrationCard key={pool.id} pool={pool} />
-          ))}
-        </div>
-      ) : tab === "available" ? (
-        <EmptyState
-          title="You have taken every calibration"
-          body="New pools open regularly. When one matching your specialty opens, its calibration will appear here."
-          action={<Button onClick={() => setTab("passed")}>See what you passed</Button>}
-        />
-      ) : (
-        <EmptyState
-          title="No calibrations passed yet"
-          body="Pass your first calibration to become eligible for a pool. Most take about ten minutes."
-          action={
-            <Button onClick={() => setTab("available")}>
-              Take a calibration
-            </Button>
-          }
-        />
+      {!calibrations.loading && !calibrations.error && (
+        <>
+          <SectionHeading>Calibrations you can take</SectionHeading>
+          {open.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {open.map((pool) => (
+                <CalibrationCard key={pool.id} pool={pool} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="Nothing waiting for you"
+              body="There is no calibration open to you right now. New pools appear here as they open."
+            />
+          )}
+
+          {passed.length > 0 && (
+            <div className="mt-8">
+              <SectionHeading>Pools you are eligible for</SectionHeading>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {passed.map((pool) => (
+                  <CalibrationCard key={pool.id} pool={pool} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </AppLayout>
   );

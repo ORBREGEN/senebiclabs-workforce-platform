@@ -2,29 +2,29 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Bell,
-  ChevronDown,
-  LayoutDashboard,
-  ListChecks,
-  Target,
-  Wallet,
-} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ChevronDown, LayoutDashboard, ListChecks, Target, User } from "lucide-react";
 import { useAppState } from "./AppState";
 import { Switch } from "./ui/Switch";
-import { CLINICIAN } from "@/lib/seed-data";
+import { api } from "@/lib/api";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/queue", label: "Review queue", icon: ListChecks },
   { href: "/calibration", label: "Calibration", icon: Target },
-  { href: "/earnings", label: "Earnings", icon: Wallet },
+  { href: "/account", label: "Account", icon: User },
 ];
+
+function initialsOf(name: string | undefined, email: string | undefined) {
+  const source = (name || email || "").trim();
+  if (!source) return "—";
+  const parts = source.split(/[\s.@_-]+/).filter(Boolean);
+  return (parts[0]?.[0] ?? "").concat(parts[1]?.[0] ?? "").toUpperCase() || "—";
+}
 
 function Sidebar() {
   const pathname = usePathname();
-  const { reviewedThisSession } = useAppState();
+  const { me, reviewedThisSession } = useAppState();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-rail md:flex">
@@ -67,11 +67,11 @@ function Sidebar() {
             aria-hidden="true"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-white"
           >
-            {CLINICIAN.initials}
+            {initialsOf(me?.name, me?.email)}
           </span>
           <div className="min-w-0">
             <p className="truncate text-[13px] font-medium text-white">
-              {CLINICIAN.name}
+              {me?.name ?? me?.email ?? "Signing in…"}
             </p>
             <p className="tnum truncate text-[12px] text-rail-text">
               {reviewedThisSession} reviewed this session
@@ -112,8 +112,17 @@ function MobileTabBar() {
 }
 
 function TopBar({ title }: { title: string }) {
-  const { available, setAvailable, unreadNotifications } = useAppState();
+  const router = useRouter();
+  const { me, available, setAvailable } = useAppState();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const signOut = async () => {
+    try {
+      await api.signOut();
+    } finally {
+      router.push("/");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-20 h-16 border-b border-hairline bg-surface">
@@ -132,20 +141,6 @@ function TopBar({ title }: { title: string }) {
             </span>
           </div>
 
-          <button
-            type="button"
-            aria-label={`Notifications, ${unreadNotifications} unread`}
-            className="focusable relative rounded-btn p-2 text-muted transition-colors hover:bg-canvas hover:text-ink"
-          >
-            <Bell size={18} aria-hidden="true" />
-            {unreadNotifications > 0 && (
-              <span
-                aria-hidden="true"
-                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger ring-2 ring-surface"
-              />
-            )}
-          </button>
-
           <div className="relative">
             <button
               type="button"
@@ -159,7 +154,7 @@ function TopBar({ title }: { title: string }) {
                 aria-hidden="true"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-white"
               >
-                {CLINICIAN.initials}
+                {initialsOf(me?.name, me?.email)}
               </span>
               <ChevronDown size={14} aria-hidden="true" className="text-muted" />
             </button>
@@ -175,17 +170,16 @@ function TopBar({ title }: { title: string }) {
                   role="menu"
                   className="absolute right-0 z-20 mt-2 w-60 rounded-card border border-hairline bg-surface py-1 shadow-[0_8px_28px_rgba(16,49,46,0.12)]"
                 >
-                  <div className="border-b border-hairline px-4 py-3">
-                    <p className="text-[13px] font-medium text-ink">
-                      {CLINICIAN.name}
-                    </p>
-                    <p className="text-[12px] text-muted">
-                      {CLINICIAN.credential}
-                    </p>
-                    <p className="mt-1 truncate text-[12px] text-muted">
-                      {CLINICIAN.email}
-                    </p>
-                  </div>
+                  {me && (
+                    <div className="border-b border-hairline px-4 py-3">
+                      <p className="truncate text-[13px] font-medium text-ink">
+                        {me.name}
+                      </p>
+                      <p className="mt-0.5 truncate text-[12px] text-muted">
+                        {me.email}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between px-4 py-3 sm:hidden">
                     <span className="text-[13px] text-ink">
                       {available ? "Available" : "Not available"}
@@ -196,14 +190,17 @@ function TopBar({ title }: { title: string }) {
                       label="Available for reviews"
                     />
                   </div>
-                  <button
+                  <Link
+                    href="/account"
                     role="menuitem"
-                    className="focusable w-full px-4 py-2 text-left text-[13px] text-ink transition-colors hover:bg-canvas"
+                    onClick={() => setMenuOpen(false)}
+                    className="focusable block px-4 py-2 text-[13px] text-ink transition-colors hover:bg-canvas"
                   >
-                    Account settings
-                  </button>
+                    Account
+                  </Link>
                   <button
                     role="menuitem"
+                    onClick={signOut}
                     className="focusable w-full px-4 py-2 text-left text-[13px] text-ink transition-colors hover:bg-canvas"
                   >
                     Sign out
