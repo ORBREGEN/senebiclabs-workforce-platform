@@ -3,11 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
-import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { SkeletonCard, EmptyState } from "@/components/ui/States";
 
 interface Pool {
   id: string;
@@ -51,89 +46,140 @@ export default function DashboardPage() {
 
   const totalReviewed = pools.reduce((sum, p) => sum + p.tasksCompleted, 0);
 
-  return (
-    <AppShell showHeader email={email}>
-      {loading && (
-        <div className="space-y-8">
-          <SkeletonCard count={3} />
-        </div>
-      )}
-
-      {!loading && (
-        <div className="max-w-6xl mx-auto">
-          {/* Header — Remotasks style */}
-          <div className="mb-10">
-            <h1 className="text-3xl sm:text-4xl font-semibold text-ink tracking-tight mb-2">
-              Welcome back
-            </h1>
-            <p className="text-base text-slate">
-              Select a project to start tasking and earning
-            </p>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg">
+        {/* Header skeleton */}
+        <div className="border-b border-hairline bg-surface p-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="h-8 w-48 bg-hairline rounded animate-pulse mb-3" />
+            <div className="h-5 w-96 bg-hairline rounded animate-pulse" />
           </div>
+        </div>
 
-          {/* Error State */}
-          {error && (
-            <div className="mb-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
-              <p className="text-sm font-medium text-red-700">{error}</p>
+        {/* Content skeleton */}
+        <div className="p-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-20 bg-hairline rounded animate-pulse" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="h-64 bg-hairline rounded-lg animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-bg">
+      {/* Header */}
+      <div className="border-b border-hairline bg-surface shadow-xs sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-h1 text-ink font-semibold">Senebiclabs</h1>
+            <p className="text-small text-slate">Clinical Review</p>
+          </div>
+          <div className="text-right">
+            <p className="text-small text-slate">{email}</p>
+            <button
+              onClick={() => router.push("/api/auth/logout")}
+              className="text-small text-accent hover:text-accent-deep transition mt-1"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="p-6 max-w-6xl mx-auto">
+        {/* Welcome section */}
+        <div className="mb-12">
+          <h2 className="text-display text-ink font-semibold mb-2">
+            Welcome back
+          </h2>
+          <p className="text-body text-slate">
+            Select a project to begin your review work.
+          </p>
+        </div>
+
+        {/* Error state */}
+        {error && (
+          <div className="bg-error/10 border border-error rounded-lg p-6 mb-8">
+            <p className="text-body font-semibold text-error mb-3">{error}</p>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="text-small text-error hover:text-error/80 font-semibold"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {pools.length === 0 && !error && (
+          <div className="border border-hairline rounded-lg p-12 text-center bg-surface">
+            <p className="text-4xl mb-4">📋</p>
+            <h3 className="text-h2 text-ink font-semibold mb-2">
+              No projects available
+            </h3>
+            <p className="text-body text-slate mb-6">
+              Complete a calibration assessment to unlock available task projects.
+            </p>
+            <button
+              onClick={() => router.push("/calibration")}
+              className="bg-accent-deep text-white font-semibold py-3 px-8 rounded-md hover:bg-accent transition"
+            >
+              Go to Training
+            </button>
+          </div>
+        )}
+
+        {/* Stats row */}
+        {pools.length > 0 && (
+          <>
+            <div className="grid grid-cols-3 gap-4 mb-12">
+              <div className="bg-surface border border-hairline rounded-lg shadow-xs p-6">
+                <p className="text-caption font-semibold text-muted uppercase tracking-wide mb-2">
+                  Projects
+                </p>
+                <p className="text-display text-ink font-semibold">
+                  {pools.length}
+                </p>
+              </div>
+              <div className="bg-surface border border-hairline rounded-lg shadow-xs p-6">
+                <p className="text-caption font-semibold text-muted uppercase tracking-wide mb-2">
+                  Total Reviewed
+                </p>
+                <p className="text-display text-ink font-semibold">
+                  {totalReviewed}
+                </p>
+              </div>
+              <div className="bg-surface border border-hairline rounded-lg shadow-xs p-6">
+                <p className="text-caption font-semibold text-muted uppercase tracking-wide mb-2">
+                  Status
+                </p>
+                <p className="text-display text-success font-semibold">
+                  {totalReviewed > 0 ? "Active" : "Ready"}
+                </p>
+              </div>
             </div>
-          )}
 
-          {/* Empty State */}
-          {pools.length === 0 ? (
-            <EmptyState
-              icon="📋"
-              title="No projects available"
-              description="Complete a calibration assessment to unlock available task projects."
-              action={{
-                label: "Go to Training",
-                onClick: () => router.push("/calibration"),
-              }}
-            />
-          ) : (
-            <>
-              {/* Stats Row — mirrors Remotasks earnings / progress summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
-                <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                    Available Projects
-                  </p>
-                  <p className="text-3xl font-semibold text-ink">{pools.length}</p>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                    Total Reviewed
-                  </p>
-                  <p className="text-3xl font-semibold text-ink">{totalReviewed}</p>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm col-span-2 sm:col-span-1">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                    Active Status
-                  </p>
-                  <p className="text-3xl font-semibold text-emerald-600">
-                    {pools.filter((p) => p.tasksCompleted > 0).length > 0
-                      ? "Tasking"
-                      : "Ready"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Active Projects section */}
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-ink">
-                  Active Projects
-                </h2>
-                <span className="text-sm text-gray-500">
-                  {pools.length} project{pools.length !== 1 ? "s" : ""} enabled
-                </span>
-              </div>
-
-              {/* Project Cards Grid */}
+            {/* Projects grid */}
+            <div>
+              <h3 className="text-h2 text-ink font-semibold mb-6">
+                Available Projects
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {pools.map((pool) => {
                   const progress = Math.min((pool.tasksCompleted / 10) * 100, 100);
-                  const isActive = pool.tasksCompleted > 0;
 
                   return (
                     <Link
@@ -141,58 +187,47 @@ export default function DashboardPage() {
                       key={pool.id}
                       className="group"
                     >
-                      <Card className="h-full border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all duration-200 cursor-pointer bg-white">
-                        <CardContent className="p-6 flex flex-col h-full">
-                          {/* Title + Badge */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base font-semibold text-ink group-hover:text-emerald-700 transition-colors truncate">
-                                {pool.name}
-                              </CardTitle>
-                              <CardDescription className="mt-1 text-sm text-gray-500">
-                                {pool.tasksCompleted} task
-                                {pool.tasksCompleted !== 1 ? "s" : ""} reviewed
-                              </CardDescription>
-                            </div>
-                            {isActive ? (
-                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 shrink-0">
-                                Active
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-gray-50 text-gray-600 border-gray-100 shrink-0">
-                                New
-                              </Badge>
-                            )}
-                          </div>
+                      <div className="bg-surface border border-hairline rounded-lg shadow-xs hover:shadow-md hover:border-accent/40 transition h-full p-6 flex flex-col">
+                        {/* Title + status */}
+                        <div className="mb-4 flex-1">
+                          <h4 className="text-h2 text-ink font-semibold group-hover:text-accent transition mb-2">
+                            {pool.name}
+                          </h4>
+                          <p className="text-small text-slate">
+                            {pool.tasksCompleted}{" "}
+                            {pool.tasksCompleted === 1
+                              ? "case reviewed"
+                              : "cases reviewed"}
+                          </p>
+                        </div>
 
-                          {/* Progress */}
-                          <div className="mb-6 mt-auto">
-                            <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                              <span>Progress</span>
-                              <span>{Math.round(progress)}%</span>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
+                        {/* Progress */}
+                        <div className="mb-6">
+                          <div className="flex justify-between text-caption text-muted mb-2">
+                            <span>Progress</span>
+                            <span>{Math.round(progress)}%</span>
                           </div>
+                          <div className="h-1.5 bg-hairline rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-accent-deep transition-all duration-300"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
 
-                          {/* CTA — Remotasks language */}
-                          <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium">
-                            Start tasking
-                          </Button>
-                        </CardContent>
-                      </Card>
+                        {/* CTA */}
+                        <button className="w-full bg-accent-deep hover:bg-accent text-white font-semibold py-3 rounded-md transition text-small">
+                          Start Reviewing
+                        </button>
+                      </div>
                     </Link>
                   );
                 })}
               </div>
-            </>
-          )}
-        </div>
-      )}
-    </AppShell>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

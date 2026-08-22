@@ -108,7 +108,7 @@ export default function TasksPage() {
       }
 
       setTasksCompleted((prev) => prev + 1);
-      localStorage.removeItem(`task-${taskConfig.taskId}`); // Clear saved form
+      localStorage.removeItem(`task-${taskConfig.taskId}`);
 
       if (data.nextTask) {
         const configRes = await fetch("/api/tasks/config", {
@@ -143,7 +143,6 @@ export default function TasksPage() {
     if (!taskConfig) return;
 
     try {
-      // Flag the task by skipping it without submitting an annotation
       const res = await fetch("/api/tasks/start", {
         method: "POST",
         headers: {
@@ -159,7 +158,7 @@ export default function TasksPage() {
         throw new Error(data.error || "Failed to load next task");
       }
 
-      localStorage.removeItem(`task-${taskConfig.taskId}`); // Clear saved form
+      localStorage.removeItem(`task-${taskConfig.taskId}`);
       setError("");
 
       if (data.task) {
@@ -190,74 +189,70 @@ export default function TasksPage() {
     }
   };
 
+  /* Loading state */
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <nav className="border-b border-gray-200 sticky top-0 z-10 bg-white">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+      <div className="min-h-screen bg-bg">
+        <div className="border-b border-hairline bg-surface p-6 sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="h-6 w-32 bg-hairline rounded animate-pulse" />
           </div>
-        </nav>
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Left column skeleton */}
-            <div className="lg:col-span-1 space-y-4">
-              <div className="bg-gray-200 rounded-lg h-32 animate-pulse"></div>
-            </div>
-            {/* Right column skeleton */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="bg-gray-200 rounded-lg h-20 animate-pulse"></div>
-              <div className="bg-gray-200 rounded-lg h-40 animate-pulse"></div>
-              <div className="bg-gray-200 rounded-lg h-12 animate-pulse"></div>
-            </div>
+        </div>
+        <div className="max-w-7xl mx-auto p-6 grid grid-cols-4 gap-6">
+          <div className="col-span-1 space-y-4">
+            <div className="h-96 bg-hairline rounded-lg animate-pulse" />
           </div>
-        </main>
+          <div className="col-span-3 space-y-4">
+            <div className="h-20 bg-hairline rounded animate-pulse" />
+            <div className="h-64 bg-hairline rounded animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  /* All tasks completed */
   if (!taskConfig) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="mb-8">
-            <span className="text-6xl">✓</span>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+        <div className="bg-surface border border-hairline rounded-lg shadow-xs p-12 max-w-md w-full text-center">
+          <div className="text-6xl mb-6">✓</div>
+          <h1 className="text-h1 text-ink font-semibold mb-3">
             All caught up!
           </h1>
-          <p className="text-gray-600 mb-8">
-            You've reviewed all available tasks. Great work — your feedback helps improve clinical care.
+          <p className="text-body text-slate mb-8 leading-relaxed">
+            You've reviewed all available tasks in this project. Your thorough
+            assessment helps improve clinical outcomes.
           </p>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-6 mb-8">
-            <div className="text-4xl font-bold text-blue-600 mb-1">
+          <div className="bg-accent/10 rounded-lg p-6 mb-8">
+            <div className="text-display text-accent-deep font-semibold mb-1">
               {tasksCompleted}
             </div>
-            <div className="text-gray-700 font-medium">
+            <div className="text-small text-slate">
               {tasksCompleted === 1 ? "case reviewed" : "cases reviewed"}
             </div>
-            <p className="text-sm text-gray-600 mt-2">this session</p>
+            <p className="text-caption text-muted mt-2">this session</p>
           </div>
 
-          <p className="text-sm text-gray-600 mb-6">
-            New tasks arrive regularly. Check back later to continue earning.
+          <p className="text-small text-slate mb-6">
+            New cases arrive regularly. Check back later to continue your work.
           </p>
 
           <button
             onClick={() => router.push("/dashboard")}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200 mb-4"
+            className="w-full bg-accent-deep text-white font-semibold py-3 rounded-md hover:bg-accent transition mb-3"
           >
             Back to Dashboard
           </button>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-caption text-muted">
             Questions?{" "}
             <a
               href="mailto:support@senebiclabs.com"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
+              className="text-accent hover:text-accent-deep font-semibold"
             >
-              support@senebiclabs.com
+              contact support
             </a>
           </p>
         </div>
@@ -265,34 +260,40 @@ export default function TasksPage() {
     );
   }
 
+  /* Task workspace */
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="border-b border-gray-200 sticky top-0 z-10 bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+    <div className="min-h-screen bg-bg">
+      {/* Header */}
+      <div className="border-b border-hairline bg-surface p-6 sticky top-0 z-10 shadow-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Task #{taskConfig.taskId}
+            <h2 className="text-h2 text-ink font-semibold">
+              Case #{taskConfig.taskId}
             </h2>
-            <p className="text-sm text-gray-500">
-              {tasksCompleted} completed this session
+            <p className="text-small text-slate mt-1">
+              {tasksCompleted} reviewed this session
             </p>
           </div>
           <button
             onClick={() => router.push("/dashboard")}
-            className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition"
+            className="text-body font-semibold text-slate hover:text-ink transition"
           >
-            Stop
+            Exit
           </button>
         </div>
-      </nav>
+      </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {error && (
-          <div className="bg-red-50 border border-red-100 rounded-lg p-4 mb-6">
-            <p className="text-red-700 text-sm font-medium">{error}</p>
+      {/* Error banner */}
+      {error && (
+        <div className="bg-error/10 border-b border-error">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <p className="text-body font-semibold text-error">{error}</p>
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Content */}
+      <div className="p-6 pb-12">
         <AnnotationWidget
           evalConfig={taskConfig.evalConfig}
           taskData={taskConfig.taskData}
@@ -301,7 +302,7 @@ export default function TasksPage() {
           onSubmit={handleAnnotationSubmit}
           onFlag={handleFlagTask}
         />
-      </main>
+      </div>
     </div>
   );
 }
