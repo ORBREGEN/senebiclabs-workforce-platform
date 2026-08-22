@@ -12,11 +12,11 @@ export function Badge({
   className = '',
 }: BadgeProps) {
   const variantClasses = {
-    default: 'bg-slate bg-opacity-10 text-slate',
+    default: 'bg-teal-soft text-teal-deep',
     success: 'bg-success bg-opacity-10 text-success',
     warning: 'bg-warning bg-opacity-10 text-warning',
     error: 'bg-error bg-opacity-10 text-error',
-    info: 'bg-accent bg-opacity-10 text-accent',
+    info: 'bg-teal-soft text-teal-deep',
   };
 
   return (

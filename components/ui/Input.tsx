@@ -25,7 +25,7 @@ export function Input({
         <p className="text-small text-muted mb-2">{hint}</p>
       )}
       <input
-        className={`w-full px-4 py-2.5 bg-surface border border-hairline rounded-md text-body text-ink placeholder-muted transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${error ? 'border-error ring-2 ring-error ring-opacity-20' : ''} ${className}`}
+        className={`w-full px-4 py-3 bg-surface border border-hairline rounded-md text-body text-ink placeholder-muted transition-all duration-160 focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal ${error ? 'border-error ring-2 ring-error ring-opacity-20' : ''} ${className}`}
         {...props}
       />
       {error && (
@@ -54,7 +54,7 @@ export function Textarea({
         <p className="text-small text-muted mb-2">{hint}</p>
       )}
       <textarea
-        className={`w-full px-4 py-2.5 bg-surface border border-hairline rounded-md text-body text-ink placeholder-muted transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none ${error ? 'border-error ring-2 ring-error ring-opacity-20' : ''} ${className}`}
+        className={`w-full px-4 py-3 bg-surface border border-hairline rounded-md text-body text-ink placeholder-muted transition-all duration-160 focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal resize-none ${error ? 'border-error ring-2 ring-error ring-opacity-20' : ''} ${className}`}
         {...props}
       />
       {error && (
@@ -103,14 +103,14 @@ export function RadioGroup({
         {options.map((option) => (
           <label
             key={option.value}
-            className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-accent hover:bg-bg transition-all duration-150 cursor-pointer"
+            className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-teal hover:bg-teal-soft transition-all duration-160 cursor-pointer"
           >
             <input
               type="radio"
               value={option.value}
               checked={value === option.value}
               onChange={(e) => onChange?.(e.target.value)}
-              className="w-5 h-5 text-accent"
+              className="w-5 h-5 text-teal"
             />
             <span className="text-body text-ink">{option.label}</span>
           </label>

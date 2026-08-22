@@ -16,18 +16,18 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseClasses = 'font-sans font-600 rounded-md transition-all duration-150 ease-smooth focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'font-semibold rounded-md transition-all duration-160 focus-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
 
   const variantClasses = {
-    primary: 'bg-accent-deep text-white hover:bg-opacity-90 focus:ring-accent',
-    secondary: 'bg-surface border border-hairline text-ink hover:bg-bg focus:ring-accent',
-    ghost: 'bg-transparent text-ink hover:bg-bg focus:ring-accent',
+    primary: 'bg-teal-deep hover:bg-teal text-white active:scale-95',
+    secondary: 'bg-surface border border-hairline text-ink hover:bg-surface-soft active:bg-teal-soft',
+    ghost: 'text-teal hover:bg-teal-soft active:text-teal-deep',
   };
 
   const sizeClasses = {
-    sm: 'px-3 py-2 text-small',
-    md: 'px-4 py-2.5 text-body',
-    lg: 'px-6 py-3 text-body',
+    sm: 'px-3 py-2 text-small h-8',
+    md: 'px-4 py-3 text-body h-10',
+    lg: 'px-6 py-4 text-body h-12',
   };
 
   return (
@@ -37,7 +37,7 @@ export function Button({
       {...props}
     >
       {loading && (
-        <span className="inline-block animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></span>
+        <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
       )}
       {children}
     </button>
