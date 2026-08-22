@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/Button";
 
 interface CalibrationItem {
   id: number;
@@ -118,134 +120,106 @@ export default function CalibrationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-600 border-t-transparent"></div>
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-teal border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (result) {
     return (
-      <div className="min-h-screen bg-white">
-        <nav className="border-b border-gray-200 bg-white">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Senebiclabs</h1>
-          </div>
-        </nav>
+      <div className="min-h-screen bg-bg flex items-center justify-center px-8 py-12">
+        <div className="w-full max-w-[560px]">
+          <div className="bg-surface border border-hairline rounded-lg shadow-sm p-12 text-center">
+            <h1 className="text-h1 font-serif text-ink mb-3">
+              {result.passed ? "You're qualified" : "Not quite yet"}
+            </h1>
 
-        <main className="max-w-2xl mx-auto px-4 py-12">
-          <div
-            className={`rounded-lg border-2 p-8 ${
-              result.passed
-                ? "bg-green-50 border-green-200"
-                : "bg-red-50 border-red-200"
-            }`}
-          >
-            <div className="mb-6">
-              <div className="text-5xl mb-4">
-                {result.passed ? "✓" : "→"}
-              </div>
-              <h2
-                className={`text-3xl font-bold mb-2 ${
-                  result.passed ? "text-green-900" : "text-red-900"
-                }`}
-              >
-                {result.passed ? "You're eligible!" : "Almost there"}
-              </h2>
-              <p
-                className={`text-lg ${
-                  result.passed ? "text-green-800" : "text-red-800"
-                }`}
-              >
-                Score: {result.score}% ({result.correctAnswers}/{result.totalQuestions})
+            <div className="bg-teal-soft rounded-lg p-6 mb-8">
+              <p className="text-display font-serif text-teal-deep mb-1">
+                {result.score}%
+              </p>
+              <p className="text-small text-slate">
+                {result.correctAnswers} of {result.totalQuestions} correct
               </p>
             </div>
 
-            {result.passed ? (
-              <>
-                <p className="text-gray-700 mb-8">
-                  You've been marked as eligible for this pool. You can now start working and earning.
-                </p>
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition duration-200"
-                >
-                  Go to Dashboard
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-700 mb-8">
-                  You need to score at least 80% to become eligible. Please review the material and try again.
-                </p>
-                <button
-                  onClick={() => {
-                    setResult(null);
-                    setSelectedPoolId("");
-                    setCalibrationItems([]);
-                    setAnswers({});
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200"
-                >
-                  Retake Calibration
-                </button>
-              </>
-            )}
+            <p className="text-body text-slate mb-8 leading-relaxed">
+              {result.passed
+                ? "You're now eligible for this project. Your review work can begin whenever you're ready."
+                : "A score of 80% or higher is needed to qualify. Take a moment with the material and try again when you're ready."}
+            </p>
+
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                if (result.passed) {
+                  router.push("/dashboard");
+                } else {
+                  setResult(null);
+                  setSelectedPoolId("");
+                  setCalibrationItems([]);
+                  setAnswers({});
+                }
+              }}
+            >
+              {result.passed ? "Go to projects" : "Try again"}
+            </Button>
           </div>
-        </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="border-b border-gray-200 sticky top-0 z-10 bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Senebiclabs</h1>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition"
-          >
-            Back
-          </button>
-        </div>
-      </nav>
-
-      <main className="max-w-2xl mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Calibration Test</h2>
-          <p className="text-gray-600">
-            Complete this assessment to become eligible for a task pool.
-            You need to score 80% or higher to pass.
+    <AppShell>
+      <div className="max-w-[720px] mx-auto">
+        <div className="mb-12">
+          <h1 className="text-display font-serif text-ink mb-3">
+            Qualification assessment
+          </h1>
+          <p className="text-body text-slate">
+            Complete this short assessment to qualify for a project. A score of
+            80% or higher is needed to pass.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-100 rounded-lg p-4 mb-6">
-            <p className="text-red-700 text-sm font-medium">{error}</p>
+          <div className="bg-error bg-opacity-10 border border-error rounded-lg p-4 mb-8">
+            <p className="text-body font-semibold text-error">{error}</p>
           </div>
         )}
 
         {!selectedPoolId ? (
-          <div className="space-y-4">
-            <p className="font-semibold text-gray-900 mb-4">Select a pool to calibrate:</p>
+          <div>
+            <h2 className="text-h2 font-serif text-ink mb-4">
+              Choose a project
+            </h2>
             {pools.length === 0 ? (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                <p className="text-gray-600">No pools available</p>
+              <div className="bg-surface border border-hairline rounded-lg p-12 text-center">
+                <p className="text-body text-slate">
+                  No projects are available for qualification right now.
+                </p>
               </div>
             ) : (
-              pools.map((pool) => (
-                <button
-                  key={pool.id}
-                  onClick={() => handlePoolSelect(pool.id)}
-                  className="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-lg p-4 text-left transition group"
-                >
-                  <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition">
-                    {pool.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">Begin calibration</p>
-                </button>
-              ))
+              <div className="space-y-3">
+                {pools.map((pool) => (
+                  <button
+                    key={pool.id}
+                    onClick={() => handlePoolSelect(pool.id)}
+                    className="w-full bg-surface border border-hairline hover:border-teal hover:shadow-md rounded-lg p-6 text-left transition-all duration-160 group"
+                  >
+                    <h3 className="text-h2 font-serif text-ink group-hover:text-teal transition-colors duration-160">
+                      {pool.name}
+                    </h3>
+                    <p className="text-small text-slate mt-1">
+                      Begin qualification
+                    </p>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         ) : (
@@ -254,67 +228,67 @@ export default function CalibrationPage() {
               e.preventDefault();
               handleSubmit();
             }}
-            className="space-y-6"
+            className="bg-surface border border-hairline rounded-lg p-8"
           >
-            {calibrationItems.map((item, index) => (
-              <div key={item.id} className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <label className="block mb-4">
-                  <span className="text-sm font-semibold text-gray-900">
+            <div className="space-y-8 divide-y divide-hairline">
+              {calibrationItems.map((item, index) => (
+                <div key={item.id} className="pt-8 first:pt-0">
+                  <p className="text-h2 font-serif text-ink mb-4">
                     {index + 1}. {item.question}
-                  </span>
-                </label>
-                <div className="space-y-2">
-                  {item.options?.map((option) => (
-                    <label
-                      key={option}
-                      className="flex items-center gap-3 p-3 rounded border border-gray-200 hover:bg-white transition cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name={`item-${item.id}`}
-                        value={option}
-                        checked={answers[item.id] === option}
-                        onChange={(e) =>
-                          setAnswers({
-                            ...answers,
-                            [item.id]: e.target.value,
-                          })
-                        }
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span className="text-gray-700">{option}</span>
-                    </label>
-                  ))}
+                  </p>
+                  <div className="space-y-2">
+                    {item.options?.map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center gap-3 p-3 rounded-md border border-hairline hover:border-teal hover:bg-teal-soft transition-all duration-160 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name={`item-${item.id}`}
+                          value={option}
+                          checked={answers[item.id] === option}
+                          onChange={(e) =>
+                            setAnswers({
+                              ...answers,
+                              [item.id]: e.target.value,
+                            })
+                          }
+                          className="w-4 h-4 text-teal"
+                        />
+                        <span className="text-body text-ink">{option}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
-            <div className="flex gap-4 pt-4">
-              <button
+            <div className="flex gap-4 pt-8 mt-8 border-t border-hairline">
+              <Button
                 type="submit"
-                disabled={submitting}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2"
+                variant="primary"
+                size="lg"
+                loading={submitting}
+                className="flex-1"
               >
-                {submitting && (
-                  <span className="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                )}
-                {submitting ? "Submitting..." : "Submit Assessment"}
-              </button>
-              <button
+                Submit assessment
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
+                size="lg"
                 onClick={() => {
                   setSelectedPoolId("");
                   setCalibrationItems([]);
                   setAnswers({});
                 }}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-3 px-6 rounded-lg transition duration-200"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

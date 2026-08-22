@@ -48,7 +48,7 @@ export default function AgreementPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-display text-ink font-600 mb-2">
+          <h1 className="text-display text-ink font-semibold mb-2">
             Contributor Agreement
           </h1>
           <p className="text-body text-slate">
@@ -62,7 +62,7 @@ export default function AgreementPage() {
             <div className="bg-bg rounded-lg p-6 mb-8 max-h-96 overflow-y-auto border border-hairline">
               <div className="space-y-6 text-small leading-relaxed text-slate">
                 <div>
-                  <h3 className="font-600 text-ink mb-2">
+                  <h3 className="font-semibold text-ink mb-2">
                     Senebiclabs Clinical Review Platform
                   </h3>
                   <p>
@@ -72,7 +72,7 @@ export default function AgreementPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-600 text-ink mb-2">1. Scope of Work</h3>
+                  <h3 className="font-semibold text-ink mb-2">1. Scope of Work</h3>
                   <p>
                     You will review clinical cases and provide annotations according
                     to the Platform's instructions. Your work will be used to improve
@@ -81,7 +81,7 @@ export default function AgreementPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-600 text-ink mb-2">
+                  <h3 className="font-semibold text-ink mb-2">
                     2. Intellectual Property
                   </h3>
                   <p>
@@ -92,7 +92,7 @@ export default function AgreementPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-600 text-ink mb-2">3. Confidentiality</h3>
+                  <h3 className="font-semibold text-ink mb-2">3. Confidentiality</h3>
                   <p>
                     You acknowledge that clinical data on the Platform is confidential.
                     You agree not to disclose, share, or use this data outside the
@@ -101,7 +101,7 @@ export default function AgreementPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-600 text-ink mb-2">4. Data Privacy</h3>
+                  <h3 className="font-semibold text-ink mb-2">4. Data Privacy</h3>
                   <p>
                     Your usage data, annotations, and feedback will be collected and
                     processed. See our Privacy Policy for details.
@@ -109,7 +109,7 @@ export default function AgreementPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-600 text-ink mb-2">5. Liability</h3>
+                  <h3 className="font-semibold text-ink mb-2">5. Liability</h3>
                   <p>
                     You use the Platform at your own risk. Senebiclabs is not liable
                     for errors, omissions, or outcomes resulting from annotations.
@@ -129,7 +129,7 @@ export default function AgreementPage() {
             )}
 
             {/* Checkbox */}
-            <label className="flex items-start gap-3 p-4 bg-accent bg-opacity-5 rounded-lg border border-accent border-opacity-20 mb-8 cursor-pointer hover:bg-opacity-10 transition-colors">
+            <label className="flex items-start gap-3 p-4 bg-teal-soft rounded-lg border border-hairline mb-8 cursor-pointer hover:border-teal transition-all duration-160">
               <input
                 type="checkbox"
                 checked={accepted}

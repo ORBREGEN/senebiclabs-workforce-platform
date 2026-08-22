@@ -21,7 +21,7 @@ export function Badge({
 
   return (
     <span
-      className={`inline-block px-3 py-1 rounded-full text-caption font-600 uppercase tracking-wide ${variantClasses[variant]} ${className}`}
+      className={`inline-block px-3 py-1 rounded-full text-caption font-semibold uppercase tracking-wide ${variantClasses[variant]} ${className}`}
     >
       {children}
     </span>

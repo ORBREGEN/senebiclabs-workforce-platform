@@ -23,13 +23,13 @@ export function AppShell({
       {/* Top Bar */}
       {showHeader && (
         <header className="sticky top-0 z-50 bg-surface border-b border-hairline">
-          <div className="h-16 px-6 flex items-center justify-between max-w-7xl mx-auto w-full">
+          <div className="h-14 px-8 flex items-center justify-between max-w-[1080px] mx-auto w-full">
             {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md bg-accent-deep flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-8 h-8 rounded-md bg-teal-deep flex items-center justify-center text-white font-semibold text-small">
                 S
               </div>
-              <span className="text-body font-600 text-ink hidden sm:inline">
+              <span className="text-body font-semibold text-ink hidden sm:inline">
                 Senebiclabs
               </span>
             </div>
@@ -61,7 +61,7 @@ export function AppShell({
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-12">
+      <main className="max-w-[1080px] mx-auto px-8 py-12">
         {children}
       </main>
     </div>

@@ -49,10 +49,10 @@ export default function SignUp() {
           <Card>
             <CardContent className="text-center">
               <div className="text-6xl mb-6">✉️</div>
-              <h1 className="text-h1 text-ink mb-2">Check your email</h1>
+              <h1 className="text-h1 font-serif text-ink mb-2">Check your email</h1>
               <p className="text-body text-slate mb-8">
                 We've sent a secure sign-in link to <br />
-                <span className="font-600 text-ink">{email}</span>
+                <span className="font-semibold text-ink">{email}</span>
               </p>
               <p className="text-small text-muted mb-8">
                 Click the link to complete sign up. It expires in 24 hours.
@@ -89,10 +89,10 @@ export default function SignUp() {
       <div className="w-full max-w-md">
         {/* Logo + Header */}
         <div className="text-center mb-12">
-          <div className="w-12 h-12 rounded-lg bg-accent-deep flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">
+          <div className="w-12 h-12 rounded-lg bg-teal-deep flex items-center justify-center text-white text-h1 font-semibold mx-auto mb-4">
             S
           </div>
-          <h1 className="text-display font-serif font-600 text-ink mb-2">
+          <h1 className="text-display font-serif text-ink mb-2">
             Senebiclabs
           </h1>
           <p className="text-body text-slate">

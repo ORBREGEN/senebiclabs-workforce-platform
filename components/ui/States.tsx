@@ -3,16 +3,7 @@ import { Button } from './Button';
 
 // Skeleton loader with shimmer effect
 export function Skeleton({ className = '' }: { className?: string }) {
-  return (
-    <div
-      className={`bg-hairline rounded-md animate-pulse ${className}`}
-      style={{
-        backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-        backgroundSize: '200% 100%',
-        animation: 'shimmer 2s infinite',
-      }}
-    />
-  );
+  return <div className={`rounded-md animate-shimmer ${className}`} />;
 }
 
 export function SkeletonCard({ count = 1 }: { count?: number }) {
@@ -50,7 +41,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="text-6xl mb-4">{icon}</div>
-      <h3 className="text-h1 text-ink mb-2">{title}</h3>
+      <h3 className="text-h1 font-serif text-ink mb-2">{title}</h3>
       <p className="text-body text-slate max-w-sm mb-8">{description}</p>
       {action && (
         <Button onClick={action.onClick}>{action.label}</Button>
@@ -79,7 +70,7 @@ export function ErrorState({
       <div className="flex gap-4">
         <div className="flex-shrink-0 text-2xl">⚠️</div>
         <div className="flex-1">
-          <h3 className="text-body font-600 text-error mb-1">{title}</h3>
+          <h3 className="text-body font-semibold text-error mb-1">{title}</h3>
           <p className="text-small text-slate mb-4">{message}</p>
           {action && (
             <Button
@@ -107,12 +98,12 @@ export function Toast({
   const bgColor = {
     success: 'bg-success',
     error: 'bg-error',
-    info: 'bg-accent',
+    info: 'bg-teal',
   };
 
   return (
     <div
-      className={`${bgColor[variant]} text-white px-6 py-3 rounded-md text-body font-500 shadow-lg animate-slide-in`}
+      className={`${bgColor[variant]} text-white px-6 py-3 rounded-md text-body font-medium shadow-lg animate-slide-in-top`}
     >
       {message}
     </div>

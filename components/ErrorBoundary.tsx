@@ -34,28 +34,32 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback?.(this.state.error!, this.retry) || (
-          <div className="min-h-screen bg-white flex items-center justify-center p-4">
-            <div className="max-w-md w-full text-center">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-              <p className="text-gray-600 mb-6">
-                An unexpected error occurred. Please try again.
-              </p>
-              <button
-                onClick={this.retry}
-                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition"
-              >
-                Try Again
-              </button>
-              <p className="text-xs text-gray-500 mt-4">
-                If this persists, contact{" "}
-                <a
-                  href="mailto:support@senebiclabs.com"
-                  className="text-blue-600 hover:text-blue-700"
+          <div className="min-h-screen bg-bg flex items-center justify-center px-8 py-12">
+            <div className="w-full max-w-[560px]">
+              <div className="bg-surface border border-hairline rounded-lg shadow-sm p-12 text-center">
+                <h1 className="text-h1 font-serif text-ink mb-3">
+                  Something went wrong
+                </h1>
+                <p className="text-body text-slate mb-8">
+                  An unexpected error interrupted things. Trying again usually
+                  sorts it out.
+                </p>
+                <button
+                  onClick={this.retry}
+                  className="inline-flex items-center justify-center h-12 px-6 bg-teal-deep hover:bg-teal text-white font-semibold rounded-md transition-all duration-160"
                 >
-                  support@senebiclabs.com
-                </a>
-              </p>
+                  Try again
+                </button>
+                <p className="text-small text-muted mt-6">
+                  If this keeps happening, reach us at{" "}
+                  <a
+                    href="mailto:support@senebiclabs.com"
+                    className="text-teal hover:text-teal-deep font-semibold"
+                  >
+                    support@senebiclabs.com
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
         )

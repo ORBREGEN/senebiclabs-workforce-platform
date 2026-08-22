@@ -16,7 +16,7 @@ export function Input({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-body font-500 text-ink mb-2">
+        <label className="block text-body font-medium text-ink mb-2">
           {label}
           {props.required && <span className="text-error ml-1">*</span>}
         </label>
@@ -45,7 +45,7 @@ export function Textarea({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-body font-500 text-ink mb-2">
+        <label className="block text-body font-medium text-ink mb-2">
           {label}
           {props.required && <span className="text-error ml-1">*</span>}
         </label>
@@ -91,7 +91,7 @@ export function RadioGroup({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-body font-500 text-ink mb-2">
+        <label className="block text-body font-medium text-ink mb-2">
           {label}
           {required && <span className="text-error ml-1">*</span>}
         </label>

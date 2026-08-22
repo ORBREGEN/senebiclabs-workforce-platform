@@ -46,33 +46,34 @@ export default function VerifyPage() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center">
-        {verifying ? (
-          <>
-            <div className="mb-6">
-              <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-600 border-t-transparent mx-auto"></div>
-            </div>
-            <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              Verifying your email
-            </h1>
-            <p className="text-gray-600">
-              Please wait while we confirm your email address...
-            </p>
-          </>
-        ) : (
-          <>
-            <div className="text-5xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-red-600 mb-2">Verification Failed</h1>
-            <p className="text-gray-700 mb-8">{error}</p>
-            <a
-              href="/"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-200"
-            >
-              Back to Sign Up
-            </a>
-          </>
-        )}
+    <div className="min-h-screen bg-bg flex items-center justify-center px-8 py-12">
+      <div className="w-full max-w-[560px]">
+        <div className="bg-surface border border-hairline rounded-lg shadow-sm p-12 text-center">
+          {verifying ? (
+            <>
+              <div className="w-10 h-10 mx-auto mb-6 border-2 border-teal border-t-transparent rounded-full animate-spin" />
+              <h1 className="text-h1 font-serif text-ink mb-2">
+                Signing you in
+              </h1>
+              <p className="text-body text-slate">
+                One moment while we confirm your email.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-h1 font-serif text-ink mb-3">
+                We couldn't verify that link
+              </h1>
+              <p className="text-body text-slate mb-8">{error}</p>
+              <a
+                href="/"
+                className="inline-flex items-center justify-center h-12 px-6 bg-teal-deep hover:bg-teal text-white font-semibold rounded-md transition-all duration-160"
+              >
+                Back to sign in
+              </a>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

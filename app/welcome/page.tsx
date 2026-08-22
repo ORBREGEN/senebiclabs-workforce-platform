@@ -1,102 +1,92 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+
+const steps = [
+  {
+    title: "How it works",
+    body: "You'll review clinical cases one at a time. Each case takes 2–5 minutes, and your judgment helps improve clinical decision-making systems.",
+  },
+  {
+    title: "Fair compensation",
+    body: "You're paid based on case complexity and the time you invest. Payments are processed weekly.",
+  },
+  {
+    title: "We're here to help",
+    body: "Questions are welcome any time — we respond within 24 hours.",
+  },
+];
 
 export default function WelcomePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     localStorage.setItem("hasVisitedWelcome", "true");
-    setLoading(false);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-600 border-t-transparent"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-3xl mx-auto px-4 py-16">
+    <div className="min-h-screen bg-bg flex items-center justify-center px-8 py-12">
+      <div className="w-full max-w-[560px]">
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 mb-12">
+          <div className="h-1 flex-1 rounded-full bg-teal" />
+          <div className="h-1 flex-1 rounded-full bg-teal" />
+          <div className="h-1 flex-1 rounded-full bg-teal" />
+          <span className="text-caption text-muted uppercase ml-2">Step 3 of 3</span>
+        </div>
+
         <div className="mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-display font-serif text-ink mb-3">
             Welcome to Senebiclabs
           </h1>
-          <p className="text-lg text-gray-600">
-            You're now set up to start reviewing clinical cases
+          <p className="text-body text-slate">
+            You're set up and ready to begin reviewing.
           </p>
         </div>
 
-        <div className="space-y-8 mb-12">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
-                <span className="text-blue-600 font-bold text-lg">1</span>
+        <div className="bg-surface border border-hairline rounded-lg shadow-sm p-6 mb-8">
+          <div className="space-y-6 divide-y divide-hairline">
+            {steps.map((step, idx) => (
+              <div key={step.title} className="flex gap-4 pt-6 first:pt-0">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-soft flex items-center justify-center">
+                  <span className="text-small font-semibold text-teal-deep">
+                    {idx + 1}
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-h2 font-serif text-ink mb-1">
+                    {step.title}
+                  </h2>
+                  <p className="text-body text-slate leading-relaxed">
+                    {step.body}
+                    {idx === 2 && (
+                      <>
+                        {" "}
+                        <a
+                          href="mailto:support@senebiclabs.com"
+                          className="text-teal hover:text-teal-deep font-semibold"
+                        >
+                          support@senebiclabs.com
+                        </a>
+                      </>
+                    )}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                How it works
-              </h3>
-              <p className="text-gray-600">
-                You'll review clinical cases one at a time. Each case takes 2–5 minutes.
-                Your feedback helps improve clinical decision-making systems.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
-                <span className="text-blue-600 font-bold text-lg">2</span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Fair compensation
-              </h3>
-              <p className="text-gray-600">
-                You're paid fairly based on task complexity and your time investment.
-                Payments are processed weekly.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
-                <span className="text-blue-600 font-bold text-lg">3</span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                We're here to help
-              </h3>
-              <p className="text-gray-600">
-                Have questions? Email us anytime at{" "}
-                <a
-                  href="mailto:support@senebiclabs.com"
-                  className="text-blue-600 font-semibold hover:text-blue-700"
-                >
-                  support@senebiclabs.com
-                </a>
-                . We respond within 24 hours.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="lg"
+          className="w-full"
           onClick={() => router.push("/dashboard")}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200"
         >
-          Start Working
-        </button>
+          Start reviewing
+        </Button>
       </div>
     </div>
   );
