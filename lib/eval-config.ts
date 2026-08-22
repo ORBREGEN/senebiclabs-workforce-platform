@@ -92,7 +92,13 @@ export function normalizeConfig(raw: RawEvalConfig | null): NormalizedConfig {
         if (!order.includes(name)) fields.push({ name, ...config });
       }
     } else {
-      fields = entries.map(([name, config]) => ({ name, ...config }));
+      // Postgres does not preserve jsonb key order, so Object.entries here is
+      // whatever the server happened to store — not the author's order. Sort by
+      // name so the render order is at least deterministic and reproducible.
+      // A config that cares about order must supply `field_order` or a list.
+      fields = entries
+        .map(([name, config]) => ({ name, ...config }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     }
   }
 

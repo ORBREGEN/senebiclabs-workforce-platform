@@ -23,6 +23,7 @@ alter table task_flags enable row level security;
 create policy "task_flags_own_rows" on task_flags
   for select using (clinician_id::text = auth.uid()::text);
 
--- Idempotent submissions depend on this pair being unique.
-create unique index if not exists idx_task_completions_clinician_task
-  on task_completions (clinician_id, ls_task_id);
+-- Idempotent submissions depend on (clinician_id, ls_task_id) being unique.
+-- That is already enforced in this database by the constraint
+-- "unique_clinician_task", verified by a duplicate insert returning 23505, so
+-- no index is created here. Adding one would only duplicate it.

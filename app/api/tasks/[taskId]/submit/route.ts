@@ -129,8 +129,10 @@ export async function POST(
         annotation_data: result,
       });
 
-    if (insertError && insertError.code !== "23505") {
-      console.error(`[submit] completion insert failed for ${taskId}`, insertError);
+    if (insertError) {
+      // The annotation is already in LS, so it must come back out — including
+      // on 23505. That code means a concurrent request won the race and has
+      // already recorded this completion, which makes ours the duplicate.
       try {
         await deleteAnnotation(annotationId);
       } catch (rollbackError) {
@@ -140,6 +142,15 @@ export async function POST(
           rollbackError
         );
       }
+
+      if (insertError.code === "23505") {
+        return NextResponse.json(
+          { error: "You have already reviewed this case." },
+          { status: 409 }
+        );
+      }
+
+      console.error(`[submit] completion insert failed for ${taskId}`, insertError);
       return NextResponse.json(
         { error: "We could not save your review. Your answers are still here." },
         { status: 500 }
