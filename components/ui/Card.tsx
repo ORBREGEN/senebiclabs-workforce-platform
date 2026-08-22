@@ -1,34 +1,47 @@
-import React from 'react';
+import React from "react";
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  /** Adds a 1px lift and soft shadow on hover. Use for cards you can click. */
+  interactive?: boolean;
 }
 
-export function Card({ children, className = '' }: CardProps) {
+export function Card({ children, className = "", interactive }: CardProps) {
   return (
-    <div className={`bg-surface border border-hairline rounded-lg shadow-sm p-6 ${className}`}>
+    <div
+      className={`rounded-card border border-hairline bg-surface ${
+        interactive
+          ? "transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_4px_14px_rgba(16,49,46,0.08)]"
+          : ""
+      } ${className}`}
+    >
       {children}
     </div>
   );
 }
 
-export function CardHeader({ children, className = '' }: CardProps) {
-  return <div className={`mb-4 ${className}`}>{children}</div>;
+export function CardContent({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={`p-5 ${className}`}>{children}</div>;
 }
 
-export function CardTitle({ children, className = '' }: CardProps) {
-  return <h3 className={`text-h2 font-semibold text-ink ${className}`}>{children}</h3>;
-}
-
-export function CardDescription({ children, className = '' }: CardProps) {
-  return <p className={`text-body text-slate mt-1 ${className}`}>{children}</p>;
-}
-
-export function CardContent({ children, className = '' }: CardProps) {
-  return <div className={`${className}`}>{children}</div>;
-}
-
-export function CardFooter({ children, className = '' }: CardProps) {
-  return <div className={`mt-6 pt-4 border-t border-hairline flex gap-3 ${className}`}>{children}</div>;
+export function SectionHeading({
+  children,
+  action,
+}: {
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex items-baseline justify-between gap-4">
+      <h2 className="text-section text-ink">{children}</h2>
+      {action}
+    </div>
+  );
 }

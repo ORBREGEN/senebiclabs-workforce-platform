@@ -2,9 +2,35 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/components/AppShell";
-import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+
+const CLAUSES = [
+  {
+    heading: "1. Scope of work",
+    body: "You review medical-AI outputs for clinical accuracy and safety, exercising your own professional judgment. You are engaged as an independent clinician, not an employee, and you choose which pools you take and when you work.",
+  },
+  {
+    heading: "2. Professional standard",
+    body: "You will apply the standard of care you would apply in practice, and the rubric supplied with each pool. Where the two conflict, flag the case rather than resolving it yourself.",
+  },
+  {
+    heading: "3. Confidentiality",
+    body: "Case material is confidential. You will not copy, retain, republish, or discuss it outside the platform, and you will not use it to train or evaluate any other system.",
+  },
+  {
+    heading: "4. Data privacy",
+    body: "Case material may contain de-identified patient information. You will not attempt to re-identify any individual. If you recognise a case or a person in it, stop and report the conflict.",
+  },
+  {
+    heading: "5. Payment",
+    body: "You are paid at the rate published for each pool, for reviews you complete and submit. Payments clear weekly. Flagged cases are paid at the same rate as completed reviews.",
+  },
+  {
+    heading: "6. Liability",
+    body: "Your reviews inform system evaluation. They are not clinical advice to any patient and create no clinician–patient relationship.",
+  },
+];
 
 export default function AgreementPage() {
   const router = useRouter();
@@ -14,11 +40,12 @@ export default function AgreementPage() {
 
   const handleAccept = async () => {
     if (!accepted) {
-      setError("You must accept the agreement to continue");
+      setError("Tick the box to confirm you have read the agreement.");
       return;
     }
 
     setLoading(true);
+    setError("");
 
     try {
       const res = await fetch("/api/agreement/accept", {
@@ -31,141 +58,81 @@ export default function AgreementPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to accept agreement");
+        setError(data.error || "That did not save. Try again.");
         return;
       }
 
       router.push("/welcome");
-    } catch (err) {
-      setError("An error occurred");
+    } catch {
+      setError("We could not reach the server. Check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AppShell showHeader={false}>
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-display text-ink font-semibold mb-2">
-            Contributor Agreement
-          </h1>
-          <p className="text-body text-slate">
-            Please review and accept our terms before proceeding
-          </p>
+    <div className="min-h-screen bg-canvas px-5 py-12">
+      <div className="mx-auto w-full max-w-[680px]">
+        <div className="mb-6 flex items-center gap-2" aria-label="Step 2 of 3">
+          <span className="h-1 flex-1 rounded-full bg-accent" />
+          <span className="h-1 flex-1 rounded-full bg-accent" />
+          <span className="h-1 flex-1 rounded-full bg-hairline" />
+          <span className="ml-2 text-label uppercase text-muted">
+            Step 2 of 3
+          </span>
         </div>
 
-        <Card>
-          <CardContent>
-            {/* Agreement Text */}
-            <div className="bg-bg rounded-lg p-6 mb-8 max-h-96 overflow-y-auto border border-hairline">
-              <div className="space-y-6 text-small leading-relaxed text-slate">
-                <div>
-                  <h3 className="font-semibold text-ink mb-2">
-                    Senebiclabs Clinical Review Platform
-                  </h3>
-                  <p>
-                    By accessing and using the Senebiclabs Clinical Review Platform
-                    (the "Platform"), you agree to the following terms:
-                  </p>
-                </div>
+        <h1 className="text-title text-ink">Reviewer agreement</h1>
+        <p className="mt-1.5 text-body text-muted">
+          Read this through before you begin. It covers what the work is, how
+          you are paid, and how case material must be handled.
+        </p>
 
-                <div>
-                  <h3 className="font-semibold text-ink mb-2">1. Scope of Work</h3>
-                  <p>
-                    You will review clinical cases and provide annotations according
-                    to the Platform's instructions. Your work will be used to improve
-                    clinical decision-support systems.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-ink mb-2">
-                    2. Intellectual Property
-                  </h3>
-                  <p>
-                    All annotations, insights, and feedback you provide become the
-                    property of Senebiclabs and may be used, modified, or distributed
-                    without further notice or compensation.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-ink mb-2">3. Confidentiality</h3>
-                  <p>
-                    You acknowledge that clinical data on the Platform is confidential.
-                    You agree not to disclose, share, or use this data outside the
-                    Platform for any purpose.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-ink mb-2">4. Data Privacy</h3>
-                  <p>
-                    Your usage data, annotations, and feedback will be collected and
-                    processed. See our Privacy Policy for details.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-ink mb-2">5. Liability</h3>
-                  <p>
-                    You use the Platform at your own risk. Senebiclabs is not liable
-                    for errors, omissions, or outcomes resulting from annotations.
-                  </p>
-                </div>
-
-                <p className="text-caption text-muted">
-                  Version 1.0 — Updated August 2026
+        <Card className="mt-6">
+          <div className="max-h-[420px] divide-y divide-hairline overflow-y-auto">
+            {CLAUSES.map((clause) => (
+              <section key={clause.heading} className="px-5 py-4">
+                <h2 className="text-body font-medium text-ink">
+                  {clause.heading}
+                </h2>
+                <p className="mt-1 text-body leading-relaxed text-muted">
+                  {clause.body}
                 </p>
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-error bg-opacity-5 border border-error border-opacity-20 rounded-md p-4 mb-6">
-                <p className="text-small text-error">{error}</p>
-              </div>
-            )}
-
-            {/* Checkbox */}
-            <label className="flex items-start gap-3 p-4 bg-teal-soft rounded-lg border border-hairline mb-8 cursor-pointer hover:border-teal transition-all duration-160">
-              <input
-                type="checkbox"
-                checked={accepted}
-                onChange={(e) => {
-                  setAccepted(e.target.checked);
-                  if (e.target.checked) setError("");
-                }}
-                className="w-5 h-5 mt-1 rounded accent"
-              />
-              <span className="text-body text-ink">
-                I have read and accept the Contributor Agreement. I understand that
-                my annotations and data will become the property of Senebiclabs and
-                used as described.
-              </span>
-            </label>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <Button
-                className="flex-1"
-                disabled={!accepted || loading}
-                loading={loading}
-                onClick={handleAccept}
-              >
-                Accept & Continue
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => router.back()}
-              >
-                Back
-              </Button>
-            </div>
-          </CardContent>
+              </section>
+            ))}
+          </div>
         </Card>
+
+        <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-card border border-hairline bg-surface p-4 transition-colors hover:bg-canvas">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => {
+              setAccepted(e.target.checked);
+              setError("");
+            }}
+            className="focusable mt-0.5 h-4 w-4 shrink-0 accent-accent"
+          />
+          <span className="text-body text-ink">
+            I have read the reviewer agreement and I accept its terms.
+          </span>
+        </label>
+
+        {error && (
+          <p role="alert" className="mt-3 text-[13px] text-danger">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button size="lg" loading={loading} onClick={handleAccept}>
+            Accept and continue
+          </Button>
+          <Button size="lg" variant="secondary" onClick={() => router.push("/")}>
+            Back to sign in
+          </Button>
+        </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

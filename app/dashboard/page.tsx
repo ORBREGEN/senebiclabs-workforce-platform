@@ -1,167 +1,219 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { AppLayout } from "@/components/AppLayout";
+import { PoolCard } from "@/components/PoolCard";
+import { Card, SectionHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
+import { COLOR, CURRENCY, formatShortDate } from "@/lib/design";
+import { DAILY_EARNINGS, POOLS, STATS } from "@/lib/seed-data";
 
-interface Pool {
-  id: string;
-  name: string;
-  lsProjectId: number;
-  tasksCompleted: number;
+function pctChange(now: number, prev: number): number {
+  return ((now - prev) / prev) * 100;
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [pools, setPools] = useState<Pool[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [email, setEmail] = useState("");
 
-  const fetchDashboard = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/dashboard", { credentials: "include" });
-      const data = await res.json();
+  const eligiblePools = POOLS.filter((p) => p.eligible);
+  const resumePool = POOLS.find(
+    (p) => p.status === "in_progress" && p.reviewed > 0 && p.reviewed < p.items
+  );
 
-      if (!res.ok) {
-        setError(data.error || "We couldn't load your projects just now.");
-        return;
-      }
-
-      setPools(data.pools || []);
-      setEmail(data.email);
-    } catch (err) {
-      setError("We couldn't reach the server. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
-
-  const totalReviewed = pools.reduce((sum, p) => sum + p.tasksCompleted, 0);
+  const sparkline = DAILY_EARNINGS.map((d) => ({
+    ...d,
+    label: formatShortDate(d.date),
+  }));
 
   return (
-    <AppShell email={email}>
-      {/* Greeting */}
-      <div className="mb-12">
-        <h1 className="text-display font-serif text-ink mb-2">Welcome back</h1>
-        <p className="text-body text-slate">
-          Choose a project to begin reviewing.
-        </p>
+    <AppLayout title="Dashboard">
+      {/* Stat tiles */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Earnings this week"
+          value={CURRENCY.format(STATS.earningsThisWeek)}
+          delta={pctChange(STATS.earningsThisWeek, STATS.earningsLastWeek)}
+        />
+        <StatTile
+          label="Reviews completed"
+          value={STATS.reviewsCompleted.toLocaleString()}
+          delta={pctChange(
+            STATS.reviewsCompleted,
+            STATS.reviewsCompletedLastWeek
+          )}
+        />
+        <StatTile
+          label="Agreement score"
+          value={`${STATS.agreementScore}%`}
+          delta={pctChange(STATS.agreementScore, STATS.agreementScoreLastWeek)}
+        />
+        <StatTile
+          label="Reviewed this week"
+          value={STATS.reviewedThisWeek.toLocaleString()}
+          delta={pctChange(STATS.reviewedThisWeek, STATS.reviewedLastWeek)}
+        />
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 mb-12">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="h-24 rounded-lg animate-shimmer"
-              />
-            ))}
-          </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-56 rounded-lg animate-shimmer" />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Error */}
-      {!loading && error && (
-        <div className="bg-surface border border-hairline rounded-lg p-8 text-center">
-          <h2 className="text-h2 font-serif text-ink mb-2">
-            Something went wrong
-          </h2>
-          <p className="text-body text-slate mb-6">{error}</p>
-          <Button variant="primary" onClick={fetchDashboard}>
-            Try again
-          </Button>
-        </div>
-      )}
-
-      {/* Empty */}
-      {!loading && !error && pools.length === 0 && (
-        <div className="bg-surface border border-hairline rounded-lg p-12 text-center">
-          <h2 className="text-h2 font-serif text-ink mb-2">
-            No projects yet
-          </h2>
-          <p className="text-body text-slate mb-6 max-w-md mx-auto">
-            Once you complete a qualification assessment, your available projects
-            will appear here.
-          </p>
-          <Button variant="primary" onClick={() => router.push("/calibration")}>
-            Start qualification
-          </Button>
-        </div>
-      )}
-
-      {/* Content */}
-      {!loading && !error && pools.length > 0 && (
-        <>
-          {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 mb-12">
-            <div className="bg-surface border border-hairline rounded-lg shadow-sm p-6">
-              <p className="text-caption text-muted uppercase mb-2">Projects</p>
-              <p className="text-display font-serif text-ink">{pools.length}</p>
-            </div>
-            <div className="bg-surface border border-hairline rounded-lg shadow-sm p-6">
-              <p className="text-caption text-muted uppercase mb-2">
-                Cases reviewed
-              </p>
-              <p className="text-display font-serif text-ink">{totalReviewed}</p>
-            </div>
-            <div className="bg-surface border border-hairline rounded-lg shadow-sm p-6 col-span-2 sm:col-span-1">
-              <p className="text-caption text-muted uppercase mb-2">Status</p>
-              <p className="text-display font-serif text-teal">
-                {totalReviewed > 0 ? "In review" : "Ready"}
-              </p>
-            </div>
-          </div>
-
-          {/* Projects */}
-          <h2 className="text-h2 font-serif text-ink mb-6">Your projects</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5">
-            {pools.map((pool) => (
-              <Link
-                href={`/tasks?poolId=${pool.id}`}
-                key={pool.id}
-                className="group"
-              >
-                <div className="bg-surface border border-hairline rounded-lg shadow-sm hover:shadow-md hover:border-teal transition-all duration-160 h-full p-6 flex flex-col">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="text-h2 font-serif text-ink group-hover:text-teal transition-colors duration-160">
-                      {pool.name}
-                    </h3>
-                    <Badge variant={pool.tasksCompleted > 0 ? "info" : "default"}>
-                      {pool.tasksCompleted > 0 ? "In review" : "New"}
-                    </Badge>
-                  </div>
-
-                  <p className="text-small text-slate mb-6 flex-1">
-                    {pool.tasksCompleted}{" "}
-                    {pool.tasksCompleted === 1 ? "case" : "cases"} reviewed
+      {/* Resume + sparkline */}
+      <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SectionHeading>Continue where you left off</SectionHeading>
+          {resumePool ? (
+            <Card className="p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h3 className="text-section text-ink">{resumePool.name}</h3>
+                  <p className="mt-1 text-body text-muted">
+                    {resumePool.description}
                   </p>
-
-                  <Button variant="primary" className="w-full">
-                    Start reviewing
-                  </Button>
                 </div>
-              </Link>
+                <Button
+                  onClick={() =>
+                    router.push(`/workspace?pool=${resumePool.id}`)
+                  }
+                >
+                  Resume reviewing
+                </Button>
+              </div>
+
+              <div className="mt-5">
+                <div className="mb-2 flex items-baseline justify-between">
+                  <span className="tnum text-[13px] font-medium text-ink">
+                    {resumePool.reviewed} of {resumePool.items} reviewed
+                  </span>
+                  <span className="tnum text-[13px] text-muted">
+                    {Math.round((resumePool.reviewed / resumePool.items) * 100)}%
+                  </span>
+                </div>
+                <div
+                  className="h-1.5 w-full overflow-hidden rounded-full bg-hairline"
+                  role="progressbar"
+                  aria-valuenow={resumePool.reviewed}
+                  aria-valuemin={0}
+                  aria-valuemax={resumePool.items}
+                  aria-label={`${resumePool.reviewed} of ${resumePool.items} reviewed`}
+                >
+                  <div
+                    className="h-full rounded-full bg-accent"
+                    style={{
+                      width: `${(resumePool.reviewed / resumePool.items) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <EmptyState
+              title="Nothing in progress"
+              body="Pick a pool and your place will be saved here between sessions."
+              action={
+                <Button onClick={() => router.push("/queue")}>
+                  Browse the review queue
+                </Button>
+              }
+            />
+          )}
+        </div>
+
+        <div>
+          <SectionHeading>Earnings, last 14 days</SectionHeading>
+          <Card className="p-5">
+            <p className="tnum text-[22px] font-semibold leading-none text-ink">
+              {CURRENCY.format(
+                DAILY_EARNINGS.reduce((sum, d) => sum + d.amount, 0)
+              )}
+            </p>
+            <p className="mt-1 text-[12px] text-muted">Across 14 days</p>
+            <div className="mt-4 h-[104px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={sparkline}
+                  margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
+                >
+                  <defs>
+                    <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="0%"
+                        stopColor={COLOR.accent}
+                        stopOpacity={0.22}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor={COLOR.accent}
+                        stopOpacity={0}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="label" hide />
+                  <YAxis hide />
+                  <Tooltip
+                    cursor={{ stroke: COLOR.hairline }}
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: `1px solid ${COLOR.hairline}`,
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: COLOR.muted }}
+                    formatter={(v) => [CURRENCY.format(Number(v)), "Earned"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke={COLOR.accent}
+                    strokeWidth={2}
+                    fill="url(#spark)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Pools */}
+      <div className="mt-8">
+        <SectionHeading
+          action={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/queue")}
+            >
+              View all
+            </Button>
+          }
+        >
+          Your pools
+        </SectionHeading>
+
+        {eligiblePools.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {eligiblePools.map((pool) => (
+              <PoolCard key={pool.id} pool={pool} />
             ))}
           </div>
-        </>
-      )}
-    </AppShell>
+        ) : (
+          <EmptyState
+            title="No pools yet"
+            body="Pass a calibration to become eligible for a pool. Each one takes about ten minutes."
+            action={
+              <Button onClick={() => router.push("/calibration")}>
+                Take a calibration
+              </Button>
+            }
+          />
+        )}
+      </div>
+    </AppLayout>
   );
 }

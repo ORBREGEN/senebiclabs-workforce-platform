@@ -3,19 +3,20 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
-const steps = [
+const POINTS = [
   {
-    title: "How it works",
-    body: "You'll review clinical cases one at a time. Each case takes 2–5 minutes, and your judgment helps improve clinical decision-making systems.",
+    title: "How the work runs",
+    body: "You review cases one at a time. Each pool carries its own rubric, shown beside every case, and your place is saved between sessions.",
   },
   {
-    title: "Fair compensation",
-    body: "You're paid based on case complexity and the time you invest. Payments are processed weekly.",
+    title: "How you are paid",
+    body: "Professional rates, set per pool and shown before you start. Payments clear every Friday for the week prior.",
   },
   {
-    title: "We're here to help",
-    body: "Questions are welcome any time — we respond within 24 hours.",
+    title: "When something is unclear",
+    body: "Flag the case. It goes to a second clinician rather than forcing a guess — flagging is expected, not penalised.",
   },
 ];
 
@@ -23,69 +24,49 @@ export default function WelcomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    localStorage.setItem("hasVisitedWelcome", "true");
+    localStorage.setItem("senebiclabs:seen-welcome", "true");
   }, []);
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center px-8 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-5 py-12">
       <div className="w-full max-w-[560px]">
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 mb-12">
-          <div className="h-1 flex-1 rounded-full bg-teal" />
-          <div className="h-1 flex-1 rounded-full bg-teal" />
-          <div className="h-1 flex-1 rounded-full bg-teal" />
-          <span className="text-caption text-muted uppercase ml-2">Step 3 of 3</span>
+        <div className="mb-6 flex items-center gap-2" aria-label="Step 3 of 3">
+          <span className="h-1 flex-1 rounded-full bg-accent" />
+          <span className="h-1 flex-1 rounded-full bg-accent" />
+          <span className="h-1 flex-1 rounded-full bg-accent" />
+          <span className="ml-2 text-label uppercase text-muted">
+            Step 3 of 3
+          </span>
         </div>
 
-        <div className="mb-12">
-          <h1 className="text-display font-serif text-ink mb-3">
-            Welcome to Senebiclabs
-          </h1>
-          <p className="text-body text-slate">
-            You're set up and ready to begin reviewing.
-          </p>
-        </div>
+        <h1 className="text-title text-ink">Welcome to Senebiclabs</h1>
+        <p className="mt-1.5 text-body text-muted">
+          You are set up and eligible to begin reviewing.
+        </p>
 
-        <div className="bg-surface border border-hairline rounded-lg shadow-sm p-6 mb-8">
-          <div className="space-y-6 divide-y divide-hairline">
-            {steps.map((step, idx) => (
-              <div key={step.title} className="flex gap-4 pt-6 first:pt-0">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-soft flex items-center justify-center">
-                  <span className="text-small font-semibold text-teal-deep">
-                    {idx + 1}
-                  </span>
-                </div>
-                <div>
-                  <h2 className="text-h2 font-serif text-ink mb-1">
-                    {step.title}
-                  </h2>
-                  <p className="text-body text-slate leading-relaxed">
-                    {step.body}
-                    {idx === 2 && (
-                      <>
-                        {" "}
-                        <a
-                          href="mailto:support@senebiclabs.com"
-                          className="text-teal hover:text-teal-deep font-semibold"
-                        >
-                          support@senebiclabs.com
-                        </a>
-                      </>
-                    )}
-                  </p>
-                </div>
+        <Card className="mt-6 divide-y divide-hairline">
+          {POINTS.map((point, i) => (
+            <div key={point.title} className="flex gap-4 p-5">
+              <span
+                aria-hidden="true"
+                className="tnum flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[13px] font-semibold text-accent"
+              >
+                {i + 1}
+              </span>
+              <div>
+                <h2 className="text-body font-medium text-ink">{point.title}</h2>
+                <p className="mt-1 text-body text-muted">{point.body}</p>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          ))}
+        </Card>
 
         <Button
-          variant="primary"
           size="lg"
-          className="w-full"
+          className="mt-6 w-full"
           onClick={() => router.push("/dashboard")}
         >
-          Start reviewing
+          Go to your dashboard
         </Button>
       </div>
     </div>

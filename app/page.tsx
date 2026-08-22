@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
 
-export default function SignUp() {
+export default function SignIn() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
-  const [magicLink, setMagicLink] = useState<string>("");
+  const [magicLink, setMagicLink] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,124 +22,101 @@ export default function SignUp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to send magic link");
+        setError(data.error || "That sign-in link could not be sent.");
         return;
       }
 
-      if (data.magicLink) {
-        setMagicLink(data.magicLink);
-      }
+      if (data.magicLink) setMagicLink(data.magicLink);
       setSent(true);
-    } catch (err) {
-      setError("An error occurred. Please try again.");
+    } catch {
+      setError("We could not reach the server. Check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (sent) {
-    return (
-      <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <Card>
-            <CardContent className="text-center">
-              <div className="text-6xl mb-6">✉️</div>
-              <h1 className="text-h1 font-serif text-ink mb-2">Check your email</h1>
-              <p className="text-body text-slate mb-8">
-                We've sent a secure sign-in link to <br />
-                <span className="font-semibold text-ink">{email}</span>
-              </p>
-              <p className="text-small text-muted mb-8">
-                Click the link to complete sign up. It expires in 24 hours.
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-5 py-12">
+      <div className="w-full max-w-[420px]">
+        <div className="mb-8 text-center">
+          <p className="text-[18px] font-semibold tracking-tight text-ink">
+            Senebiclabs
+          </p>
+          <p className="mt-1 text-body text-muted">Clinical review platform</p>
+        </div>
+
+        <Card className="p-6">
+          {sent ? (
+            <>
+              <h1 className="text-section text-ink">Check your email</h1>
+              <p className="mt-2 text-body text-muted">
+                We sent a sign-in link to{" "}
+                <span className="font-medium text-ink">{email}</span>. It works
+                once and expires in 24 hours.
               </p>
 
               {magicLink && (
                 <Button
-                  className="w-full mb-4"
+                  className="mt-5 w-full"
                   onClick={() => (window.location.href = magicLink)}
                 >
-                  Sign in now
+                  Open sign-in link
                 </Button>
               )}
 
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => {
                   setSent(false);
                   setMagicLink("");
                 }}
+                className="focusable mt-4 w-full rounded-btn text-[13px] font-medium text-accent underline-offset-2 hover:underline"
               >
-                Back to sign up
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+                Use a different email
+              </button>
+            </>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <h1 className="text-section text-ink">Sign in</h1>
+              <p className="mt-1 text-body text-muted">
+                We will email you a link. There is no password to remember.
+              </p>
 
-  return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        {/* Logo + Header */}
-        <div className="text-center mb-12">
-          <div className="w-12 h-12 rounded-lg bg-teal-deep flex items-center justify-center text-white text-h1 font-semibold mx-auto mb-4">
-            S
-          </div>
-          <h1 className="text-display font-serif text-ink mb-2">
-            Senebiclabs
-          </h1>
-          <p className="text-body text-slate">
-            Clinical review platform
-          </p>
-        </div>
-
-        {/* Form Card */}
-        <Card>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Input
-                  type="email"
-                  label="Email address"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
-              </div>
+              <label
+                htmlFor="email"
+                className="mb-1.5 mt-5 block text-label uppercase text-muted"
+              >
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@hospital.org"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "signin-error" : undefined}
+                className={`focusable h-10 w-full rounded-card border bg-surface px-3 text-body text-ink placeholder:text-muted ${
+                  error ? "border-danger" : "border-hairline"
+                }`}
+              />
 
               {error && (
-                <div className="bg-error bg-opacity-5 border border-error border-opacity-20 rounded-md p-4">
-                  <p className="text-small text-error">{error}</p>
-                </div>
+                <p id="signin-error" className="mt-2 text-[13px] text-danger">
+                  {error}
+                </p>
               )}
 
-              <Button
-                type="submit"
-                loading={loading}
-                className="w-full"
-              >
-                Send sign-in link
+              <Button type="submit" loading={loading} className="mt-5 w-full">
+                Email me a sign-in link
               </Button>
             </form>
-
-            <p className="text-caption text-muted text-center mt-6">
-              We'll send a secure link to your email. No password needed.
-            </p>
-          </CardContent>
+          )}
         </Card>
-
-        {/* Footer */}
-        <p className="text-caption text-muted text-center mt-8">
-          By signing up, you agree to our terms and privacy policy
-        </p>
       </div>
     </div>
   );

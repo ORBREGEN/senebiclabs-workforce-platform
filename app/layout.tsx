@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
+import { AppStateProvider } from "@/components/AppState";
 import "./globals.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -9,16 +10,9 @@ const plexSans = IBM_Plex_Sans({
   display: "swap",
 });
 
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
-  weight: ["600"],
-  subsets: ["latin"],
-  display: "swap",
-});
-
 export const metadata: Metadata = {
-  title: "Senebiclabs Workforce Platform",
-  description: "Clinician task review platform",
+  title: "Senebiclabs",
+  description: "Clinical review platform for licensed clinicians",
 };
 
 export default function RootLayout({
@@ -27,11 +21,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${plexSans.variable} ${sourceSerif.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${plexSans.variable} h-full antialiased`}>
+      <body className="min-h-full">
+        <AppStateProvider>{children}</AppStateProvider>
+      </body>
     </html>
   );
 }
