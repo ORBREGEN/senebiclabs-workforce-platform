@@ -121,6 +121,26 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  /** Emails a sign-in link. `magicLink` comes back in development only. */
+  requestMagicLink: (email: string) =>
+    call<{ success: true; magicLink?: string }>("/api/auth/magic-link", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  /** Exchanges a magic-link token for the session cookie. */
+  verifyMagicLink: (token: string) =>
+    call<{ success: true }>("/api/auth/verify", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
+
+  acceptAgreement: () =>
+    call<{ success: true }>("/api/agreement/accept", {
+      method: "POST",
+      body: JSON.stringify({ accepted: true }),
+    }),
+
   me: () => call<Me>("/api/me"),
   stats: () => call<Stats>("/api/me/stats"),
   pools: () => call<{ pools: Pool[] }>("/api/pools").then((r) => r.pools),

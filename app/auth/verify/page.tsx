@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { ApiError, api } from "@/lib/api";
 
 function Verify() {
   const router = useRouter();
@@ -22,27 +23,14 @@ function Verify() {
       }
 
       try {
-        const res = await fetch("/api/auth/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-          credentials: "include",
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          setError(
-            data.error ||
-              "This link has expired or has already been used. Request a new one."
-          );
-          setVerifying(false);
-          return;
-        }
-
+        await api.verifyMagicLink(token);
         router.push("/agreement");
-      } catch {
-        setError("We could not reach the server. Check your connection.");
+      } catch (err) {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "This link has expired or has already been used. Request a new one."
+        );
         setVerifying(false);
       }
     };

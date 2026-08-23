@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ApiError, api } from "@/lib/api";
 
 const CLAUSES = [
   {
@@ -48,23 +49,12 @@ export default function AgreementPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/agreement/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ accepted: true }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "That did not save. Try again.");
-        return;
-      }
-
+      await api.acceptAgreement();
       router.push("/welcome");
-    } catch {
-      setError("We could not reach the server. Check your connection.");
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "That did not save. Try again."
+      );
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ApiError, api } from "@/lib/api";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -17,22 +18,15 @@ export default function SignIn() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "That sign-in link could not be sent.");
-        return;
-      }
-
+      const data = await api.requestMagicLink(email);
       if (data.magicLink) setMagicLink(data.magicLink);
       setSent(true);
-    } catch {
-      setError("We could not reach the server. Check your connection.");
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "That sign-in link could not be sent."
+      );
     } finally {
       setLoading(false);
     }
