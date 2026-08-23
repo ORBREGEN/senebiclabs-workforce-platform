@@ -12,16 +12,27 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * The client-facing deliverable for a pool.
+ * INTERNAL OPS PREVIEW — not the client deliverable. Never send this to a client.
  *
- * This is what the client receives, so it deliberately carries none of our
- * internals: no clinician identity, no database ids, no Label Studio task or
- * annotation ids, no project id. Cases are identified by the client's own
- * case_id, and reviewers appear as stable per-report labels.
+ * This platform is the clinician-serving layer. It serves tasks from Label
+ * Studio projects the HEALTH backend creates and owns, and writes annotations
+ * back to LS. HEALTH pulls those annotations via its webhook and produces the
+ * official client deliverable, including QA, adjudication and gold comparison.
  *
- * Access is by delivery key, not a clinician session — a clinician must never
- * be able to read other clinicians' answers.
+ * What this endpoint gives is a rough read of what our clinicians have
+ * submitted for a pool, so ops can sanity-check serving without opening Label
+ * Studio. Its consensus is a naive majority with no QA, no adjudication and no
+ * gold, so it will disagree with the official deliverable — treat any conflict
+ * as this being wrong.
+ *
+ * It still redacts identity (no clinician, database or LS ids) because ops
+ * output leaks, but redaction is not what makes something deliverable.
+ *
+ * Authorised by OPS_API_KEY, never a clinician session.
  */
+
+const INTERNAL_NOTICE =
+  "INTERNAL OPS PREVIEW — not the client deliverable. Produced by the clinician-serving layer without QA, adjudication or gold. The official deliverable comes from the HEALTH backend.";
 
 function unauthorized() {
   return NextResponse.json({ error: "Not authorised." }, { status: 401 });
@@ -31,16 +42,16 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ poolId: string }> }
 ) {
-  const expected = process.env.DELIVERY_API_KEY;
+  const expected = process.env.OPS_API_KEY;
   if (!expected) {
     return NextResponse.json(
-      { error: "Delivery is not configured." },
+      { error: "Internal preview is not configured." },
       { status: 503 }
     );
   }
 
   const presented =
-    req.headers.get("x-delivery-key") ??
+    req.headers.get("x-ops-key") ?? req.headers.get("x-delivery-key") ??
     req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
 
   if (presented !== expected) return unauthorized();
@@ -68,7 +79,7 @@ export async function GET(
     .order("completed_at", { ascending: true });
 
   if (error) {
-    console.error("[deliverable] completion query failed", error);
+    console.error("[internal-preview] completion query failed", error);
     return NextResponse.json(
       { error: "Could not assemble the report." },
       { status: 500 }
@@ -83,7 +94,7 @@ export async function GET(
       caseIdByTask.set(task.id, caseIdFor(raw, data) ?? `case-${task.id}`);
     }
   } catch (err) {
-    console.error("[deliverable] LS unreachable", err);
+    console.error("[internal-preview] LS unreachable", err);
     return NextResponse.json(
       { error: "Could not reach the case store." },
       { status: 502 }
@@ -121,6 +132,8 @@ export async function GET(
   );
 
   const report = {
+    internal_only: true,
+    notice: INTERNAL_NOTICE,
     report: {
       title: config.title ?? pool.name,
       purpose: config.purpose,
@@ -149,15 +162,20 @@ export async function GET(
   };
 
   if (format === "csv") {
-    return new NextResponse(toCsv(report), {
+    const body = `${csvCell(INTERNAL_NOTICE)}\n\n${toCsv(report)}`;
+    return new NextResponse(body, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${slug(report.report.title)}.csv"`,
+        "Content-Disposition": `attachment; filename="INTERNAL-PREVIEW-${slug(report.report.title)}.csv"`,
+        "X-Internal-Only": "true",
+        "X-Robots-Tag": "noindex, nofollow",
       },
     });
   }
 
-  return NextResponse.json(report);
+  return NextResponse.json(report, {
+    headers: { "X-Internal-Only": "true", "X-Robots-Tag": "noindex, nofollow" },
+  });
 }
 
 function slug(value: string): string {

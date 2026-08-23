@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * rolls those back itself; this endpoint is the safety net for the case where
  * the rollback also failed, and the monitor for whether that is happening.
  *
- * Operator endpoint: authorised by DELIVERY_API_KEY, never a clinician session.
+ * Operator endpoint: authorised by OPS_API_KEY, never a clinician session.
  */
 
 interface Orphan {
@@ -65,10 +65,10 @@ async function findOrphans(
 }
 
 function authorise(req: NextRequest): boolean {
-  const expected = process.env.DELIVERY_API_KEY;
+  const expected = process.env.OPS_API_KEY;
   if (!expected) return false;
   const presented =
-    req.headers.get("x-delivery-key") ??
+    req.headers.get("x-ops-key") ?? req.headers.get("x-delivery-key") ??
     req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   return presented === expected;
 }
