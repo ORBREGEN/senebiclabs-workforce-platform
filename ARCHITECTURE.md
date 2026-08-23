@@ -71,3 +71,27 @@ sets `X-Internal-Only: true`, and its CSV downloads as
 
 `to_name` on every result entry is `"image"`, matching the convention in
 HEALTH's label configs.
+
+## Testing
+
+**Never test against a project that has a webhook.** A webhook means HEALTH
+consumes every annotation written there, and deleting the tasks afterwards does
+not retract what was already delivered.
+
+`scripts/assert-test-project.mjs` enforces this — it refuses any project with a
+webhook. Call it before a test writes anything:
+
+```js
+import { assertTestProject } from "./scripts/assert-test-project.mjs";
+await assertTestProject(38);
+```
+
+or from the shell:
+
+```
+node scripts/assert-test-project.mjs 38
+```
+
+Project 38 ("All Field Types — TEST") is the sandbox and is webhook-free.
+Projects 27, 17 and 18 carry HEALTH's webhook — do not write to them.
+
