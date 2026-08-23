@@ -1,191 +1,173 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/middleware";
 import { supabaseAdmin } from "@/lib/supabase";
+import { deleteAnnotation, listTasks } from "@/lib/labelstudio";
 
-const LS_API_URL = process.env.LABEL_STUDIO_API_URL!;
-const LS_API_TOKEN = process.env.LABEL_STUDIO_API_TOKEN!;
+export const dynamic = "force-dynamic";
 
-async function lsRequest(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<any> {
-  const url = `${LS_API_URL}${endpoint}`;
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Token ${LS_API_TOKEN}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+/**
+ * Divergence between Label Studio and our completion records.
+ *
+ * An orphan is an annotation in LS with no completion row behind it — the
+ * signature of a write that succeeded in LS and then failed to record. Submit
+ * rolls those back itself; this endpoint is the safety net for the case where
+ * the rollback also failed, and the monitor for whether that is happening.
+ *
+ * Operator endpoint: authorised by DELIVERY_API_KEY, never a clinician session.
+ */
 
-  if (!response.ok) {
-    throw new Error(
-      `Label Studio API error: ${response.status} ${response.statusText}`
+interface Orphan {
+  ls_task_id: number;
+  annotation_id: number;
+  created_at: string | null;
+}
+
+async function findOrphans(
+  poolId: string,
+  projectId: number
+): Promise<{ orphans: Orphan[]; lsCount: number; dbCount: number }> {
+  const tasks = await listTasks(projectId);
+
+  const { data: completions } = await supabaseAdmin
+    .from("task_completions")
+    .select("ls_task_id")
+    .eq("pool_id", poolId);
+
+  // How many completions we hold per task, versus how many annotations exist.
+  const recorded = new Map<number, number>();
+  for (const row of completions ?? []) {
+    recorded.set(row.ls_task_id, (recorded.get(row.ls_task_id) ?? 0) + 1);
+  }
+
+  const orphans: Orphan[] = [];
+  let lsCount = 0;
+
+  for (const task of tasks) {
+    const annotations = (task.annotations ?? []) as {
+      id: number;
+      created_at?: string;
+    }[];
+    lsCount += annotations.length;
+
+    const surplus = annotations.length - (recorded.get(task.id) ?? 0);
+    if (surplus <= 0) continue;
+
+    // The newest annotations are the ones a failed write would have left.
+    for (const annotation of annotations.slice(-surplus)) {
+      orphans.push({
+        ls_task_id: task.id,
+        annotation_id: annotation.id,
+        created_at: annotation.created_at ?? null,
+      });
+    }
+  }
+
+  return { orphans, lsCount, dbCount: completions?.length ?? 0 };
+}
+
+function authorise(req: NextRequest): boolean {
+  const expected = process.env.DELIVERY_API_KEY;
+  if (!expected) return false;
+  const presented =
+    req.headers.get("x-delivery-key") ??
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  return presented === expected;
+}
+
+async function resolvePool(poolId: string) {
+  const { data } = await supabaseAdmin
+    .from("pools")
+    .select("id, name, ls_project_id")
+    .eq("id", poolId)
+    .maybeSingle();
+  return data;
+}
+
+/** Reports divergence. Read-only — safe to run on a schedule. */
+export async function GET(req: NextRequest) {
+  if (!authorise(req)) {
+    return NextResponse.json({ error: "Not authorised." }, { status: 401 });
+  }
+
+  const poolId = new URL(req.url).searchParams.get("poolId");
+  if (!poolId) {
+    return NextResponse.json(
+      { error: "poolId is required." },
+      { status: 400 }
     );
   }
 
-  return response.json();
+  const pool = await resolvePool(poolId);
+  if (!pool) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  try {
+    const { orphans, lsCount, dbCount } = await findOrphans(
+      pool.id,
+      pool.ls_project_id
+    );
+    return NextResponse.json({
+      pool: pool.name,
+      checked_at: new Date().toISOString(),
+      ls_annotations: lsCount,
+      db_completions: dbCount,
+      diverged: lsCount !== dbCount,
+      orphans_found: orphans.length,
+      orphans,
+    });
+  } catch (err) {
+    console.error("[reconcile] check failed", err);
+    return NextResponse.json(
+      { error: "Could not reach the case store." },
+      { status: 502 }
+    );
+  }
 }
 
-async function deleteAnnotation(annotationId: number): Promise<void> {
-  await lsRequest(`/api/annotations/${annotationId}/`, {
-    method: "DELETE",
-  });
-}
-
-async function findOrphans(projectId: number): Promise<any[]> {
-  // Fetch all tasks with annotations for this project
-  const tasks = await lsRequest(
-    `/api/projects/${projectId}/tasks/?limit=1000&include=annotations`
-  );
-
-  const orphans: any[] = [];
-
-  for (const task of tasks) {
-    for (const annotation of task.annotations || []) {
-      // Check if this annotation has a matching task_completion record
-      const { data: completion } = await supabaseAdmin
-        .from("task_completions")
-        .select("id")
-        .eq("ls_task_id", task.id)
-        .eq("annotation_data", JSON.stringify(annotation.result || []))
-        .maybeSingle();
-
-      if (!completion) {
-        orphans.push({
-          taskId: task.id,
-          annotationId: annotation.id,
-          createdBy: annotation.created_username,
-          createdAt: annotation.created_at,
-        });
-      }
-    }
+/** Deletes the orphan annotations found for a pool. Destructive. */
+export async function POST(req: NextRequest) {
+  if (!authorise(req)) {
+    return NextResponse.json({ error: "Not authorised." }, { status: 401 });
   }
 
-  return orphans;
-}
+  const url = new URL(req.url);
+  const poolId = url.searchParams.get("poolId");
+  if (url.searchParams.get("action") !== "cleanup") {
+    return NextResponse.json(
+      { error: "Pass action=cleanup to delete orphan annotations." },
+      { status: 400 }
+    );
+  }
+  if (!poolId) {
+    return NextResponse.json({ error: "poolId is required." }, { status: 400 });
+  }
 
-export async function GET(req: NextRequest) {
-  return withAuth(req, async (req, auth) => {
-    try {
-      const { searchParams } = new URL(req.url);
-      const projectId = searchParams.get("projectId");
+  const pool = await resolvePool(poolId);
+  if (!pool) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-      if (!projectId) {
-        return NextResponse.json(
-          { error: "projectId query parameter required" },
-          { status: 400 }
-        );
+  try {
+    const { orphans } = await findOrphans(pool.id, pool.ls_project_id);
+    let deleted = 0;
+    const failures: number[] = [];
+
+    for (const orphan of orphans) {
+      try {
+        await deleteAnnotation(orphan.annotation_id);
+        deleted++;
+      } catch {
+        failures.push(orphan.annotation_id);
       }
-
-      const orphans = await findOrphans(parseInt(projectId));
-
-      return NextResponse.json({
-        projectId: parseInt(projectId),
-        orphansFound: orphans.length,
-        orphans,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Reconciliation GET error:", error);
-      return NextResponse.json(
-        {
-          error:
-            error instanceof Error ? error.message : "Reconciliation failed",
-        },
-        { status: 500 }
-      );
     }
-  });
-}
 
-export async function POST(req: NextRequest) {
-  return withAuth(req, async (req, auth) => {
-    try {
-      const { searchParams } = new URL(req.url);
-      const action = searchParams.get("action") || "audit";
-      const body = await req.json();
-      const { projectId, annotationIds } = body;
-
-      if (!projectId) {
-        return NextResponse.json(
-          { error: "projectId required" },
-          { status: 400 }
-        );
-      }
-
-      if (action === "audit") {
-        // Find and report orphans
-        const orphans = await findOrphans(projectId);
-
-        return NextResponse.json({
-          action: "audit",
-          projectId,
-          orphansFound: orphans.length,
-          orphans,
-          timestamp: new Date().toISOString(),
-          message:
-            orphans.length > 0
-              ? `Found ${orphans.length} orphan annotation(s). Use action=cleanup to delete.`
-              : "No orphans found.",
-        });
-      }
-
-      if (action === "cleanup") {
-        if (!annotationIds || !Array.isArray(annotationIds)) {
-          return NextResponse.json(
-            { error: "annotationIds array required for cleanup action" },
-            { status: 400 }
-          );
-        }
-
-        const results = {
-          deleted: 0,
-          failed: 0,
-          errors: [] as string[],
-        };
-
-        for (const annotationId of annotationIds) {
-          try {
-            await deleteAnnotation(annotationId);
-            results.deleted++;
-          } catch (err) {
-            results.failed++;
-            results.errors.push(
-              `Failed to delete annotation ${annotationId}: ${
-                err instanceof Error ? err.message : "Unknown error"
-              }`
-            );
-          }
-        }
-
-        return NextResponse.json({
-          action: "cleanup",
-          projectId,
-          deleted: results.deleted,
-          failed: results.failed,
-          errors: results.errors,
-          timestamp: new Date().toISOString(),
-          message: `Deleted ${results.deleted} orphan annotation(s). ${
-            results.failed > 0 ? `${results.failed} deletions failed.` : ""
-          }`,
-        });
-      }
-
-      return NextResponse.json(
-        { error: `Unknown action: ${action}` },
-        { status: 400 }
-      );
-    } catch (error) {
-      console.error("Reconciliation POST error:", error);
-      return NextResponse.json(
-        {
-          error:
-            error instanceof Error ? error.message : "Reconciliation failed",
-        },
-        { status: 500 }
-      );
-    }
-  });
+    return NextResponse.json({
+      pool: pool.name,
+      orphans_found: orphans.length,
+      deleted,
+      failed: failures,
+    });
+  } catch (err) {
+    console.error("[reconcile] cleanup failed", err);
+    return NextResponse.json(
+      { error: "Could not reach the case store." },
+      { status: 502 }
+    );
+  }
 }

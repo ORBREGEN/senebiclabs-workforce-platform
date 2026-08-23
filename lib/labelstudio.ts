@@ -76,12 +76,37 @@ export async function getProject(projectId: number): Promise<LsProject> {
   return ls<LsProject>(`/api/projects/${projectId}/`);
 }
 
-/** Tasks in a project, newest page first. LS caps this; we page conservatively. */
-export async function listTasks(
-  projectId: number,
-  limit = 200
-): Promise<LsTask[]> {
-  return ls<LsTask[]>(`/api/projects/${projectId}/tasks/?limit=${limit}`);
+const PAGE_SIZE = 200;
+/** Guards against an unbounded loop if a project is enormous or LS misbehaves. */
+const MAX_PAGES = 100;
+
+/**
+ * Every task in a project.
+ *
+ * Label Studio ignores `limit` and pages this endpoint at 50 by default, so a
+ * single call silently truncates: a pool of 500 cases would serve 50 and then
+ * report itself drained. Pages are followed explicitly until one comes back
+ * short.
+ */
+export async function listTasks(projectId: number): Promise<LsTask[]> {
+  const all: LsTask[] = [];
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const batch = await ls<LsTask[] | { tasks?: LsTask[] }>(
+      `/api/projects/${projectId}/tasks/?page=${page}&page_size=${PAGE_SIZE}`
+    );
+
+    // A page past the end comes back as an object, not an array.
+    const rows = Array.isArray(batch) ? batch : (batch?.tasks ?? []);
+    all.push(...rows);
+
+    if (rows.length < PAGE_SIZE) return all;
+  }
+
+  console.error(
+    `[labelstudio] project ${projectId} exceeded ${MAX_PAGES} pages; list truncated`
+  );
+  return all;
 }
 
 export async function getTask(taskId: number): Promise<LsTask> {

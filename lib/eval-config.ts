@@ -199,6 +199,13 @@ export interface LsResultEntry {
 
 const TO_NAME = "image";
 
+/**
+ * Upper bound on a free-text answer. Generous for a clinical rationale, but
+ * finite — an unbounded string reaches both Label Studio and the client's
+ * deliverable, so it is rejected at the door rather than stored.
+ */
+export const MAX_TEXT_LENGTH = 20_000;
+
 export class TranslationError extends Error {}
 
 /**
@@ -234,7 +241,25 @@ export function answersToLsResult(
 
     switch (field.type) {
       case "single":
-      case "from_classes":
+      case "from_classes": {
+        // An answer outside the configured set would flow straight into the
+        // client's deliverable, so it is refused rather than recorded.
+        const allowed = optionsFor(field, config.classes);
+        const choice = String(value);
+        if (allowed.length > 0 && !allowed.includes(choice)) {
+          throw new TranslationError(
+            `"${choice}" is not one of the options for "${field.title}".`
+          );
+        }
+        result.push({
+          from_name: field.name,
+          to_name: TO_NAME,
+          type: "choices",
+          value: { choices: [choice] },
+        });
+        break;
+      }
+
       case "flag": {
         result.push({
           from_name: field.name,
@@ -247,8 +272,14 @@ export function answersToLsResult(
 
       case "scale": {
         const rating = Number(value);
-        if (!Number.isFinite(rating)) {
-          throw new TranslationError(`"${field.title}" must be a number.`);
+        const max = field.max ?? 5;
+        if (!Number.isInteger(rating)) {
+          throw new TranslationError(`"${field.title}" must be a whole number.`);
+        }
+        if (rating < 1 || rating > max) {
+          throw new TranslationError(
+            `"${field.title}" must be between 1 and ${max}.`
+          );
         }
         result.push({
           from_name: field.name,
@@ -260,11 +291,17 @@ export function answersToLsResult(
       }
 
       case "text": {
+        const text = String(value);
+        if (text.length > MAX_TEXT_LENGTH) {
+          throw new TranslationError(
+            `"${field.title}" is too long — ${text.length.toLocaleString()} characters, limit ${MAX_TEXT_LENGTH.toLocaleString()}.`
+          );
+        }
         result.push({
           from_name: field.name,
           to_name: TO_NAME,
           type: "textarea",
-          value: { text: [String(value)] },
+          value: { text: [text] },
         });
         break;
       }
@@ -278,6 +315,15 @@ export function answersToLsResult(
           throw new TranslationError(
             `"${field.title}" needs a finding when the answer is Yes.`
           );
+        }
+
+        if (finding !== undefined && finding !== "") {
+          const allowed = optionsFor(field, config.classes);
+          if (allowed.length > 0 && !allowed.includes(String(finding))) {
+            throw new TranslationError(
+              `"${finding}" is not one of the findings for "${field.title}".`
+            );
+          }
         }
 
         result.push({

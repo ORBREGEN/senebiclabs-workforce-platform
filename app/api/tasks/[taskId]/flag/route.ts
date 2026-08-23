@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/middleware";
 import { supabaseAdmin } from "@/lib/supabase";
 import { FORBIDDEN, requireEligiblePoolForTask } from "@/lib/gate";
-import { getTask } from "@/lib/labelstudio";
+import { getTask, LabelStudioError } from "@/lib/labelstudio";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +34,15 @@ export async function POST(
     let lsTask;
     try {
       lsTask = await getTask(taskId);
-    } catch {
-      return FORBIDDEN();
+    } catch (err) {
+      if (err instanceof LabelStudioError && err.status === 404) {
+        return FORBIDDEN();
+      }
+      console.error(`[flag] LS unreachable resolving task ${taskId}`, err);
+      return NextResponse.json(
+        { error: "We could not reach the case store. Try again in a moment." },
+        { status: 502 }
+      );
     }
 
     const projectId = Number(

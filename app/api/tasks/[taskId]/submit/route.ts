@@ -6,6 +6,7 @@ import {
   createAnnotation,
   deleteAnnotation,
   getTask,
+  LabelStudioError,
   listTasks,
   selectNextTask,
 } from "@/lib/labelstudio";
@@ -54,11 +55,20 @@ export async function POST(
     }
 
     // The task must belong to a project backing a pool this clinician holds.
+    // A store that is merely unreachable must not be reported as a refusal:
+    // "not eligible" reads as permanent, and the clinician would stop retrying.
     let lsTask;
     try {
       lsTask = await getTask(taskId);
-    } catch {
-      return FORBIDDEN();
+    } catch (err) {
+      if (err instanceof LabelStudioError && err.status === 404) {
+        return FORBIDDEN();
+      }
+      console.error(`[submit] LS unreachable resolving task ${taskId}`, err);
+      return NextResponse.json(
+        { error: "We could not reach the case store. Your answers are still here — try again in a moment." },
+        { status: 502 }
+      );
     }
 
     const projectId = Number(
@@ -107,6 +117,23 @@ export async function POST(
       );
     }
 
+    // The overlap ceiling was last checked when this task was served, which may
+    // have been minutes ago and before other clinicians submitted. Re-check it
+    // against the task we just fetched: the client commissioned a fixed number
+    // of reviews per case and must not be billed for more.
+    if (
+      pool.maxAnnotations !== null &&
+      (lsTask.total_annotations ?? 0) >= pool.maxAnnotations
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This case has already been reviewed by enough clinicians. Nothing was lost — the next case is ready.",
+        },
+        { status: 409 }
+      );
+    }
+
     // 1. Write to LS.
     let annotationId: number;
     try {
@@ -120,14 +147,57 @@ export async function POST(
     }
 
     // 2. Record the completion. On failure, undo the LS write.
-    const { error: insertError } = await supabaseAdmin
-      .from("task_completions")
-      .insert({
-        clinician_id: auth.clinicianId,
-        pool_id: pool.id,
-        ls_task_id: taskId,
-        annotation_data: result,
-      });
+    //
+    // claim_task_slot (migration 002) counts and inserts under a row lock, so
+    // concurrent clinicians cannot each pass the ceiling check and overshoot the
+    // reviews the client commissioned. Where the function is not yet installed
+    // this falls back to a plain insert, which is idempotent but can overshoot.
+    const claim = await supabaseAdmin.rpc("claim_task_slot", {
+      p_clinician_id: auth.clinicianId,
+      p_pool_id: pool.id,
+      p_ls_task_id: taskId,
+      p_annotation_data: result,
+    });
+
+    let insertError = claim.error;
+
+    if (claim.error) {
+      const missing =
+        claim.error.code === "PGRST202" ||
+        /claim_task_slot/i.test(claim.error.message ?? "");
+      if (missing) {
+        console.warn(
+          "[submit] claim_task_slot missing — run migration 002; overlap is not atomic"
+        );
+        const fallback = await supabaseAdmin.from("task_completions").insert({
+          clinician_id: auth.clinicianId,
+          pool_id: pool.id,
+          ls_task_id: taskId,
+          annotation_data: result,
+        });
+        insertError = fallback.error;
+      }
+    } else if (claim.data === "full" || claim.data === "already") {
+      // Someone else took the slot between serving and submitting; the
+      // annotation we just wrote has to come back out.
+      try {
+        await deleteAnnotation(annotationId);
+      } catch (rollbackError) {
+        console.error(
+          `[submit] ORPHAN annotation ${annotationId} on task ${taskId}`,
+          rollbackError
+        );
+      }
+      return NextResponse.json(
+        {
+          error:
+            claim.data === "already"
+              ? "You have already reviewed this case."
+              : "This case has already been reviewed by enough clinicians. Nothing was lost — the next case is ready.",
+        },
+        { status: 409 }
+      );
+    }
 
     if (insertError) {
       // The annotation is already in LS, so it must come back out — including
