@@ -21,6 +21,24 @@ interface Orphan {
   created_at: string | null;
 }
 
+/**
+ * Whether this project backs more than one pool.
+ *
+ * Label Studio annotations carry no pool, so when several pools sit on one
+ * project an annotation cannot be attributed to any of them. Comparing one
+ * pool's completions against the project's annotations would then report every
+ * other pool's work — and the cleanup would delete it.
+ */
+async function sharedProject(projectId: number, poolId: string) {
+  const { data } = await supabaseAdmin
+    .from("pools")
+    .select("id, name")
+    .eq("ls_project_id", projectId);
+
+  const others = (data ?? []).filter((p) => p.id !== poolId);
+  return others.length > 0 ? others.map((p) => p.name) : null;
+}
+
 async function findOrphans(
   poolId: string,
   projectId: number
@@ -99,12 +117,25 @@ export async function GET(req: NextRequest) {
   const pool = await resolvePool(poolId);
   if (!pool) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
+  const shared = await sharedProject(pool.ls_project_id, pool.id);
+  if (shared) {
+    return NextResponse.json({
+      pool: pool.name,
+      checked_at: new Date().toISOString(),
+      attributable: false,
+      reason:
+        `Label Studio project ${pool.ls_project_id} also backs: ${shared.join(", ")}. ` +
+        "Annotations carry no pool, so divergence cannot be attributed to one pool here.",
+    });
+  }
+
   try {
     const { orphans, lsCount, dbCount } = await findOrphans(
       pool.id,
       pool.ls_project_id
     );
     return NextResponse.json({
+      attributable: true,
       pool: pool.name,
       checked_at: new Date().toISOString(),
       ls_annotations: lsCount,
@@ -142,6 +173,19 @@ export async function POST(req: NextRequest) {
 
   const pool = await resolvePool(poolId);
   if (!pool) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  const shared = await sharedProject(pool.ls_project_id, pool.id);
+  if (shared) {
+    // Deleting here would destroy the other pools' annotations.
+    return NextResponse.json(
+      {
+        error:
+          `Refusing to clean up: Label Studio project ${pool.ls_project_id} also backs ${shared.join(", ")}. ` +
+          "Annotations cannot be attributed to one pool, so any deletion risks another pool's work.",
+      },
+      { status: 409 }
+    );
+  }
 
   try {
     const { orphans } = await findOrphans(pool.id, pool.ls_project_id);

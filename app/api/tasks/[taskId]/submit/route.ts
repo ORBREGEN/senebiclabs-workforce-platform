@@ -161,6 +161,13 @@ export async function POST(
 
     let insertError = claim.error;
 
+    // Which path decided this submit — atomic claim, or the degraded fallback.
+    console.log(
+      `[submit] task ${taskId} claim_task_slot → ${
+        claim.error ? `error ${claim.error.code}` : claim.data
+      }`
+    );
+
     if (claim.error) {
       const missing =
         claim.error.code === "PGRST202" ||
