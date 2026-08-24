@@ -37,30 +37,28 @@ export async function requireEligiblePool(
 ): Promise<GatedPool | null> {
   if (!poolId || typeof poolId !== "string") return null;
 
-  const { data: eligibility } = await supabaseAdmin
+  // One round trip, not two: the inner join yields nothing when the pool does
+  // not exist and nothing when the clinician is not eligible, which is exactly
+  // the indistinguishable refusal this gate owes callers.
+  const { data } = await supabaseAdmin
     .from("pool_eligibility")
-    .select("pool_id")
+    .select(
+      "pools!inner(id, name, ls_project_id, eval_config, maximum_annotations)"
+    )
     .eq("clinician_id", clinicianId)
     .eq("pool_id", poolId)
     .eq("eligible", true)
     .maybeSingle();
 
-  if (!eligibility) return null;
-
-  const { data: pool } = await supabaseAdmin
-    .from("pools")
-    .select("id, name, ls_project_id, eval_config, maximum_annotations")
-    .eq("id", poolId)
-    .maybeSingle();
-
+  const pool = (data as unknown as { pools?: Record<string, unknown> })?.pools;
   if (!pool) return null;
 
   return {
-    id: pool.id,
-    name: pool.name,
-    lsProjectId: pool.ls_project_id,
-    maxAnnotations: pool.maximum_annotations ?? null,
-    evalConfig: pool.eval_config ?? null,
+    id: String(pool.id),
+    name: String(pool.name),
+    lsProjectId: Number(pool.ls_project_id),
+    maxAnnotations: (pool.maximum_annotations as number | null) ?? null,
+    evalConfig: (pool.eval_config as Record<string, unknown> | null) ?? null,
   };
 }
 

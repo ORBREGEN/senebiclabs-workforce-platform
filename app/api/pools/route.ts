@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/middleware";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getProject } from "@/lib/labelstudio";
+import { countTasks } from "@/lib/labelstudio";
 import { normalizeConfig, type RawEvalConfig } from "@/lib/eval-config";
 
 export const dynamic = "force-dynamic";
@@ -56,8 +56,7 @@ export async function GET(req: NextRequest) {
 
         let items: number | null = null;
         try {
-          const project = await getProject(Number(pool.ls_project_id));
-          items = project.task_number ?? null;
+          items = await countTasks(Number(pool.ls_project_id));
         } catch (err) {
           console.error(`[pools] LS project ${pool.ls_project_id} unreachable`, err);
         }

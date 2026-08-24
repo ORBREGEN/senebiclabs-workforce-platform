@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/middleware";
 import { supabaseAdmin } from "@/lib/supabase";
 import { FORBIDDEN, requireEligiblePool } from "@/lib/gate";
-import { listTasks, selectNextTask } from "@/lib/labelstudio";
+import { findNextTask } from "@/lib/labelstudio";
 import {
   buildContext,
   caseIdFor,
@@ -43,8 +43,7 @@ export async function GET(
 
     let task;
     try {
-      const tasks = await listTasks(pool.lsProjectId);
-      task = selectNextTask(tasks, seen, pool.maxAnnotations);
+      task = await findNextTask(pool.lsProjectId, seen, pool.maxAnnotations);
     } catch (err) {
       console.error(`[next] LS unreachable for pool ${pool.id}`, err);
       return NextResponse.json(

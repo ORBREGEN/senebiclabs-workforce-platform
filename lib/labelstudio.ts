@@ -77,8 +77,61 @@ export async function getProject(projectId: number): Promise<LsProject> {
 }
 
 const PAGE_SIZE = 200;
+/**
+ * Smaller than PAGE_SIZE, because seeking one task should not pay for a large
+ * page. Each LS page carries every task's annotations, so cost scales with the
+ * page: 200 tasks costs ~670ms against ~390ms for 50. Fifty candidates is
+ * ample to find an available task in a pool being worked front-to-back.
+ */
+const SEEK_PAGE_SIZE = 50;
 /** Guards against an unbounded loop if a project is enormous or LS misbehaves. */
 const MAX_PAGES = 100;
+
+/**
+ * How many tasks a project holds.
+ *
+ * `/api/tasks/?project=N` reports `total` alongside the page, so one request
+ * with the smallest possible page answers this — no need to walk the project.
+ */
+export async function countTasks(projectId: number): Promise<number | null> {
+  const res = await ls<{ total?: number }>(
+    `/api/tasks/?project=${projectId}&page=1&page_size=1`
+  );
+  return typeof res?.total === "number" ? res.total : null;
+}
+
+/**
+ * The first task in a project this clinician may work on.
+ *
+ * Walks pages and returns as soon as a page yields a candidate, rather than
+ * collecting the whole project and filtering afterwards. Serving one task from
+ * a 1,300-task project costs one page, not seven — and the cost no longer grows
+ * with the size of the client's pool.
+ */
+export async function findNextTask(
+  projectId: number,
+  excludeTaskIds: Set<number>,
+  maxAnnotations: number | null
+): Promise<LsTask | null> {
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const body = await ls<{ tasks?: LsTask[] } | LsTask[]>(
+      `/api/tasks/?project=${projectId}&page=${page}&page_size=${SEEK_PAGE_SIZE}&ordering=id`
+    );
+    const rows = Array.isArray(body) ? body : (body?.tasks ?? []);
+    if (rows.length === 0) return null;
+
+    const candidate = selectNextTask(rows, excludeTaskIds, maxAnnotations);
+    if (candidate) return candidate;
+
+    // This page was entirely taken; only then is the next page worth fetching.
+    if (rows.length < SEEK_PAGE_SIZE) return null;
+  }
+
+  console.error(
+    `[labelstudio] project ${projectId} exceeded ${MAX_PAGES} pages while seeking a task`
+  );
+  return null;
+}
 
 /**
  * Every task in a project.

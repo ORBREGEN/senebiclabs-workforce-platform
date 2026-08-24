@@ -7,8 +7,7 @@ import {
   deleteAnnotation,
   getTask,
   LabelStudioError,
-  listTasks,
-  selectNextTask,
+  findNextTask,
 } from "@/lib/labelstudio";
 import {
   answersToLsResult,
@@ -265,11 +264,7 @@ async function nextTaskFor(
 
   let task;
   try {
-    task = selectNextTask(
-      await listTasks(pool.lsProjectId),
-      seen,
-      pool.maxAnnotations
-    );
+    task = await findNextTask(pool.lsProjectId, seen, pool.maxAnnotations);
   } catch {
     return null;
   }

@@ -7,7 +7,13 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 async function sendMagicLinkEmail(email: string, magicLinkUrl: string) {
   if (!RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY not set, skipping email");
+    // In development the link comes back in the response, so there is still a
+    // way in. In production there is not: an unconfigured key must fail loudly
+    // rather than look like a sent email.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+    console.warn("RESEND_API_KEY not set — skipping email (development only)");
     return;
   }
 
@@ -62,13 +68,20 @@ export async function POST(req: NextRequest) {
     const magicLinkToken = await generateMagicLink(email);
     const magicLinkUrl = `/auth/verify?token=${magicLinkToken}`;
 
-    // Send email via Resend
+    // If the email does not go out, say so. Reporting success here would show
+    // a clinician "check your email" for a message that was never sent, and
+    // lock them out with no error anywhere for anyone to see.
     try {
       await sendMagicLinkEmail(email, magicLinkUrl);
     } catch (emailError) {
-      console.error("Email send failed:", emailError);
-      // Don't fail the whole signup if email fails — still return success
-      // so the user knows to check for a fallback
+      console.error("[magic-link] send failed:", emailError);
+      return NextResponse.json(
+        {
+          error:
+            "We could not send your sign-in link. Please try again in a moment, or contact support if it keeps happening.",
+        },
+        { status: 502 }
+      );
     }
 
     // For development, still return the link in response
