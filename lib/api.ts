@@ -7,6 +7,8 @@
  */
 
 export interface Me {
+  /** Whether this clinician may invite colleagues. Gates the invite UI. */
+  can_invite: boolean;
   id: string;
   name: string;
   email: string;
@@ -129,11 +131,17 @@ export const api = {
     }),
 
   /** Exchanges a magic-link token for the session cookie. */
-  verifyMagicLink: (token: string) =>
-    call<{ success: true }>("/api/auth/verify", {
+  verifyMagicLink: (token: string, invite?: string | null) =>
+    call<{ success: true; created: boolean }>("/api/auth/verify", {
       method: "POST",
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, invite: invite ?? null }),
     }),
+
+  createInvite: (email: string) =>
+    call<{ invited_email: string; expires_at: string; sent: boolean }>(
+      "/api/invites",
+      { method: "POST", body: JSON.stringify({ email }) }
+    ),
 
   acceptAgreement: () =>
     call<{ success: true }>("/api/agreement/accept", {

@@ -8,6 +8,7 @@ import { Card, SectionHeading } from "@/components/ui/Card";
 import { Switch } from "@/components/ui/Switch";
 import { ErrorState, Skeleton } from "@/components/ui/States";
 import { api } from "@/lib/api";
+import { InviteColleague } from "@/components/InviteColleague";
 import { useAsync } from "@/lib/use-async";
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -62,6 +63,8 @@ export default function AccountPage() {
 
         <div className="mt-8">
           <SectionHeading>Availability</SectionHeading>
+          {me.data?.can_invite && <InviteColleague />}
+
           <Card className="p-5">
             <div className="flex items-start justify-between gap-4">
               <div>

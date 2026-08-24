@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       await Promise.all([
         supabaseAdmin
           .from("clinicians")
-          .select("id, name, email, active")
+          .select("id, name, email, active, can_invite")
           .eq("id", auth.clinicianId)
           .maybeSingle(),
         supabaseAdmin
@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
       id: clinician.id,
       name: clinician.name,
       email: clinician.email,
+      can_invite: clinician.can_invite === true,
       agreement_accepted: Boolean(acceptance),
       eligible_pool_ids: (eligibility ?? []).map((row) => row.pool_id),
     });
