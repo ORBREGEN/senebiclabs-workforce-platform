@@ -25,6 +25,9 @@ const SORT_LABEL: Record<SortKey, string> = {
 const SELECT =
   "focusable h-9 rounded-btn border border-hairline bg-surface px-3 text-[13px] text-ink transition-colors hover:bg-canvas";
 
+const CALIBRATION_ENABLED =
+  process.env.NEXT_PUBLIC_CALIBRATION_ENABLED === "true";
+
 export default function QueuePage() {
   const router = useRouter();
   const { available } = useAppState();
@@ -82,11 +85,15 @@ export default function QueuePage() {
       {!pools.loading && !pools.error && total === 0 && (
         <EmptyState
           title="No pools yet"
-          body="You become eligible for a pool by passing its calibration. Anything open to you will be listed there."
+          body={CALIBRATION_ENABLED
+              ? "You become eligible for a pool by passing its calibration. Anything open to you will be listed there."
+              : "No review pools are open to you yet. They appear here as soon as one is assigned — nothing else is needed from you."}
           action={
-            <Button onClick={() => router.push("/calibration")}>
-              Go to calibration
-            </Button>
+            CALIBRATION_ENABLED ? (
+              <Button onClick={() => router.push("/calibration")}>
+                Go to calibration
+              </Button>
+            ) : undefined
           }
         />
       )}

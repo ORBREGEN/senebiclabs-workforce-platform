@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   }
 
   const res = NextResponse.redirect(
-    new URL(result.created ? "/agreement" : "/dashboard", req.url)
+    new URL(result.created ? "/welcome" : "/dashboard", req.url)
   );
   res.cookies.set(SESSION_COOKIE, result.sessionToken, {
     httpOnly: true,

@@ -25,7 +25,7 @@ function Verify() {
       try {
         const invite = searchParams.get("invite");
         const { created } = await api.verifyMagicLink(token, invite);
-        router.push(created ? "/agreement" : "/dashboard");
+        router.push(created ? "/welcome" : "/dashboard");
       } catch (err) {
         setError(
           err instanceof ApiError

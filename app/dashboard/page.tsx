@@ -26,6 +26,9 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
+const CALIBRATION_ENABLED =
+  process.env.NEXT_PUBLIC_CALIBRATION_ENABLED === "true";
+
 export default function DashboardPage() {
   const router = useRouter();
   const { reviewedThisSession } = useAppState();
@@ -118,11 +121,15 @@ export default function DashboardPage() {
         {!pools.loading && !pools.error && pools.data?.length === 0 && (
           <EmptyState
             title="No pools yet"
-            body="You become eligible for a pool by passing its calibration. Anything open to you will be listed there."
+            body={CALIBRATION_ENABLED
+              ? "You become eligible for a pool by passing its calibration. Anything open to you will be listed there."
+              : "No review pools are open to you yet. They appear here as soon as one is assigned — nothing else is needed from you."}
             action={
-              <Button onClick={() => router.push("/calibration")}>
-                Go to calibration
-              </Button>
+              CALIBRATION_ENABLED ? (
+                <Button onClick={() => router.push("/calibration")}>
+                  Go to calibration
+                </Button>
+              ) : undefined
             }
           />
         )}

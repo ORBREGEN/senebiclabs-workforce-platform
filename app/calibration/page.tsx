@@ -77,7 +77,24 @@ function CalibrationCard({ pool }: { pool: CalibrationPool }) {
   );
 }
 
+const CALIBRATION_ENABLED =
+  process.env.NEXT_PUBLIC_CALIBRATION_ENABLED === "true";
+
 export default function CalibrationPage() {
+  // Access comes with the invitation while this is off; the page would only
+  // offer assessments that unlock nothing.
+  if (!CALIBRATION_ENABLED) {
+    return (
+      <AppLayout title="Calibration">
+        <EmptyState
+          title="Calibration is not required"
+          body="Your invitation already gives you access to the pools open to you. Head to your dashboard to start reviewing."
+          action={<Button onClick={() => (window.location.href = "/dashboard")}>Go to dashboard</Button>}
+        />
+      </AppLayout>
+    );
+  }
+
   const calibrations = useAsync(() => api.calibrations(), []);
 
   const passed = (calibrations.data ?? []).filter((p) => p.status === "passed");

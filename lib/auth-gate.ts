@@ -1,6 +1,7 @@
 import "server-only";
 import { SignJWT } from "jose";
 import { supabaseAdmin } from "./supabase";
+import { grantDirectAccess } from "./access";
 import {
   consumeInvite,
   findPendingInviteForEmail,
@@ -83,6 +84,9 @@ export async function signInOrReject(
 
   if (existing) {
     if (existing.active === false) return { ok: false, reason: "inactive" };
+    // Top up anyone who predates direct access, so no one is stranded on an
+    // empty dashboard waiting for a calibration that is switched off.
+    await grantDirectAccess(existing.id);
     return {
       ok: true,
       clinicianId: existing.id,
@@ -138,6 +142,12 @@ export async function signInOrReject(
     await supabaseAdmin.from("clinicians").delete().eq("id", created.id);
     return { ok: false, reason: "invite_used" };
   }
+
+  // The invitation is the qualification while calibration is off.
+  const granted = await grantDirectAccess(created.id);
+  console.log(
+    `[gate] created ${created.email} from invite ${invite.id}; pools granted: ${granted}`
+  );
 
   return {
     ok: true,

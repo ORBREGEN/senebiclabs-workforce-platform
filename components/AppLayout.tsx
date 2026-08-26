@@ -8,10 +8,16 @@ import { useAppState } from "./AppState";
 import { Switch } from "./ui/Switch";
 import { api } from "@/lib/api";
 
+const CALIBRATION_ENABLED =
+  process.env.NEXT_PUBLIC_CALIBRATION_ENABLED === "true";
+
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/queue", label: "Review queue", icon: ListChecks },
-  { href: "/calibration", label: "Calibration", icon: Target },
+  // Shown only when calibration gates access; an invitation qualifies otherwise.
+  ...(CALIBRATION_ENABLED
+    ? [{ href: "/calibration", label: "Calibration", icon: Target }]
+    : []),
   { href: "/account", label: "Account", icon: User },
 ];
 
