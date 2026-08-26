@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { deleteAnnotation, listTasks } from "@/lib/labelstudio";
+import { reviewRequired } from "@/lib/review";
+import type { RawEvalConfig } from "@/lib/eval-config";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,35 @@ interface Orphan {
 }
 
 /**
+ * What "no divergence" means depends on how the pool works.
+ *
+ * A consensus pool publishes one annotation per completed review, so the two
+ * counts should match. A review pool does not: an item is authored and then
+ * approved, both are paid work and both are completions, and a rejected draft
+ * adds another completion with no annotation at all. Comparing completions to
+ * annotations there reports divergence that is simply the flow working.
+ *
+ * The invariant that does hold for a review pool is that Label Studio carries
+ * exactly the approved items — one published annotation each.
+ */
+interface Reconciliation {
+  mode: "consensus" | "review";
+  orphans: Orphan[];
+  lsCount: number;
+  /** What LS is being compared against: completions, or approved items. */
+  expected: number;
+  diverged: boolean;
+  /** Present for review pools: completions are counted, never compared. */
+  work?: {
+    completions_total: number;
+    approved_items: number;
+    awaiting_review: number;
+    awaiting_author: number;
+    rejections: number;
+  };
+}
+
+/**
  * Whether this project backs more than one pool.
  *
  * Label Studio annotations carry no pool, so when several pools sit on one
@@ -39,18 +70,32 @@ async function sharedProject(projectId: number, poolId: string) {
   return others.length > 0 ? others.map((p) => p.name) : null;
 }
 
-async function findOrphans(
+async function reconcile(
   poolId: string,
-  projectId: number
-): Promise<{ orphans: Orphan[]; lsCount: number; dbCount: number }> {
+  projectId: number,
+  raw: RawEvalConfig | null
+): Promise<Reconciliation> {
   const tasks = await listTasks(projectId);
 
+  if (reviewRequired(raw)) return reconcileReview(poolId, tasks);
+  return reconcileConsensus(poolId, tasks);
+}
+
+type LsTaskLite = {
+  id: number;
+  annotations?: { id: number; created_at?: string }[];
+};
+
+/** One annotation per completed review; the counts should match. */
+async function reconcileConsensus(
+  poolId: string,
+  tasks: LsTaskLite[]
+): Promise<Reconciliation> {
   const { data: completions } = await supabaseAdmin
     .from("task_completions")
     .select("ls_task_id")
     .eq("pool_id", poolId);
 
-  // How many completions we hold per task, versus how many annotations exist.
   const recorded = new Map<number, number>();
   for (const row of completions ?? []) {
     recorded.set(row.ls_task_id, (recorded.get(row.ls_task_id) ?? 0) + 1);
@@ -60,10 +105,7 @@ async function findOrphans(
   let lsCount = 0;
 
   for (const task of tasks) {
-    const annotations = (task.annotations ?? []) as {
-      id: number;
-      created_at?: string;
-    }[];
+    const annotations = task.annotations ?? [];
     lsCount += annotations.length;
 
     const surplus = annotations.length - (recorded.get(task.id) ?? 0);
@@ -79,7 +121,79 @@ async function findOrphans(
     }
   }
 
-  return { orphans, lsCount, dbCount: completions?.length ?? 0 };
+  const expected = completions?.length ?? 0;
+  return {
+    mode: "consensus",
+    orphans,
+    lsCount,
+    expected,
+    diverged: lsCount !== expected,
+  };
+}
+
+/**
+ * Label Studio should carry exactly the approved items.
+ *
+ * An approved item records the annotation it published, so an orphan can be
+ * identified rather than inferred: any annotation no approved item claims
+ * should not be there. That is stricter than the consensus check, which can
+ * only compare counts per task.
+ */
+async function reconcileReview(
+  poolId: string,
+  tasks: LsTaskLite[]
+): Promise<Reconciliation> {
+  const [{ data: items }, { count: completionCount }] = await Promise.all([
+    supabaseAdmin
+      .from("review_items")
+      .select("ls_task_id, state, ls_annotation_id, revision")
+      .eq("pool_id", poolId),
+    supabaseAdmin
+      .from("task_completions")
+      .select("id", { count: "exact", head: true })
+      .eq("pool_id", poolId),
+  ]);
+
+  const rows = items ?? [];
+  const approved = rows.filter((r) => r.state === "approved");
+  const published = new Set(
+    approved
+      .map((r) => r.ls_annotation_id as number | null)
+      .filter((id): id is number => typeof id === "number")
+  );
+
+  const orphans: Orphan[] = [];
+  let lsCount = 0;
+
+  for (const task of tasks) {
+    for (const annotation of task.annotations ?? []) {
+      lsCount += 1;
+      if (!published.has(annotation.id)) {
+        orphans.push({
+          ls_task_id: task.id,
+          annotation_id: annotation.id,
+          created_at: annotation.created_at ?? null,
+        });
+      }
+    }
+  }
+
+  return {
+    mode: "review",
+    orphans,
+    lsCount,
+    expected: approved.length,
+    diverged: lsCount !== approved.length,
+    work: {
+      completions_total: completionCount ?? 0,
+      approved_items: approved.length,
+      awaiting_review: rows.filter((r) => r.state === "needs_review").length,
+      awaiting_author: rows.filter((r) => r.state === "needs_author").length,
+      // Every send-back bumps the revision, so the total is how many times work
+      // went round again — each of which is a completion with no annotation.
+      rejections: rows.reduce((n, r) => n + ((r.revision as number) ?? 0), 0),
+    },
+  };
 }
 
 function authorise(req: NextRequest): boolean {
@@ -94,7 +208,7 @@ function authorise(req: NextRequest): boolean {
 async function resolvePool(poolId: string) {
   const { data } = await supabaseAdmin
     .from("pools")
-    .select("id, name, ls_project_id")
+    .select("id, name, ls_project_id, eval_config")
     .eq("id", poolId)
     .maybeSingle();
   return data;
@@ -130,19 +244,28 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { orphans, lsCount, dbCount } = await findOrphans(
+    const r = await reconcile(
       pool.id,
-      pool.ls_project_id
+      pool.ls_project_id,
+      (pool.eval_config ?? null) as RawEvalConfig | null
     );
+
     return NextResponse.json({
       attributable: true,
       pool: pool.name,
+      mode: r.mode,
       checked_at: new Date().toISOString(),
-      ls_annotations: lsCount,
-      db_completions: dbCount,
-      diverged: lsCount !== dbCount,
-      orphans_found: orphans.length,
-      orphans,
+      ls_annotations: r.lsCount,
+      // What LS is measured against. For a review pool that is the approved
+      // items, not the completions — authors, reviewers and re-authored drafts
+      // all produce completions, and only approval publishes.
+      expected_annotations: r.expected,
+      compared_against:
+        r.mode === "review" ? "approved review items" : "recorded completions",
+      diverged: r.diverged,
+      orphans_found: r.orphans.length,
+      orphans: r.orphans,
+      ...(r.work ? { work: r.work } : {}),
     });
   } catch (err) {
     console.error("[reconcile] check failed", err);
@@ -188,7 +311,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { orphans } = await findOrphans(pool.id, pool.ls_project_id);
+    const { orphans } = await reconcile(
+      pool.id,
+      pool.ls_project_id,
+      (pool.eval_config ?? null) as RawEvalConfig | null
+    );
     let deleted = 0;
     const failures: number[] = [];
 

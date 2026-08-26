@@ -138,6 +138,24 @@ export async function POST(
         );
       }
 
+      // Authoring is paid work and counts toward the author's totals, even
+      // though nothing is published until someone approves it. This is why a
+      // review pool holds more completions than annotations.
+      const { error: authorCompletion } = await supabaseAdmin
+        .from("task_completions")
+        .insert({
+          clinician_id: auth.clinicianId,
+          pool_id: pool.id,
+          ls_task_id: taskId,
+          annotation_data: answers,
+        });
+
+      // 23505 means they already have a completion on this task — a re-author
+      // after a send-back. The work happened; one row for it is enough.
+      if (authorCompletion && authorCompletion.code !== "23505") {
+        console.error("[submit] author completion insert failed", authorCompletion);
+      }
+
       return NextResponse.json({
         recorded: true,
         phase: "author",
