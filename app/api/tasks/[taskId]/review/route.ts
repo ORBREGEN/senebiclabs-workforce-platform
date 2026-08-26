@@ -24,6 +24,34 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
+ * Records the reviewer's pass as work done.
+ *
+ * Called for every outcome, approve and send-back alike. Paying only for
+ * approvals would pay reviewers to approve, which is the one thing a review
+ * pass must not reward. The unique index on (clinician_id, ls_task_id) means a
+ * reviewer who sends an item back and later approves the rewrite is recorded
+ * once, not twice.
+ */
+async function recordReviewerWork(
+  clinicianId: string,
+  poolId: string,
+  taskId: number,
+  data: unknown
+): Promise<void> {
+  const { error } = await supabaseAdmin.from("task_completions").insert({
+    clinician_id: clinicianId,
+    pool_id: poolId,
+    ls_task_id: taskId,
+    annotation_data: data,
+  });
+
+  // 23505 is the same reviewer's earlier pass on this task. One row is right.
+  if (error && error.code !== "23505") {
+    console.error("[review] reviewer completion insert failed", error);
+  }
+}
+
+/**
  * The approval pass on written work.
  *
  * Three outcomes: approve the text as written, edit it and approve the edit, or
@@ -119,6 +147,12 @@ export async function POST(
           { status: 409 }
         );
       }
+      await recordReviewerWork(auth.clinicianId, pool.id, taskId, {
+        review_action: "rejected",
+        reason: reason.slice(0, 1000),
+        revision: item.revision + 1,
+      });
+
       return NextResponse.json({
         reviewed: true,
         action: "rejected",
@@ -188,19 +222,7 @@ export async function POST(
       );
     }
 
-    // The reviewer's pass is work done, and counts toward their totals.
-    const { error: completionError } = await supabaseAdmin
-      .from("task_completions")
-      .insert({
-        clinician_id: auth.clinicianId,
-        pool_id: pool.id,
-        ls_task_id: taskId,
-        annotation_data: result,
-      });
-
-    if (completionError && completionError.code !== "23505") {
-      console.error("[review] completion insert failed", completionError);
-    }
+    await recordReviewerWork(auth.clinicianId, pool.id, taskId, result);
 
     return NextResponse.json({
       reviewed: true,

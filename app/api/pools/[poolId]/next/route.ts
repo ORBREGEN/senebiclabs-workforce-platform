@@ -52,7 +52,12 @@ export async function GET(
     // ahead of authoring, so finished drafts do not queue up behind new ones.
     if (reviewRequired(raw0)) {
       const waiting = await itemsAwaitingReview(pool.id, auth.clinicianId);
-      const reviewable = waiting.find((i) => !seen.has(i.ls_task_id));
+
+      // Only flags hide an item from a reviewer. A completion must not: a
+      // reviewer who sent work back should see the rewrite and judge whether
+      // their objection was met. Their pay is deduped by the completion index,
+      // not by hiding the item.
+      const reviewable = waiting.find((i) => !flagged.includes(i.ls_task_id));
 
       if (reviewable) {
         let lsTask;
