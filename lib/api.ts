@@ -50,7 +50,14 @@ export interface Field {
   visible_when?: string;
 }
 
+export type ReviewAction = "approve" | "edit" | "reject";
+
 export interface Task {
+  /** "author" and "review" are the two phases of written work. */
+  phase?: "single" | "author" | "review";
+  /** Present in the review phase: what the author wrote. */
+  authored?: Record<string, unknown> | null;
+  revision?: number;
   task_id: number;
   pool: { id: string; name: string; purpose: Purpose };
   case_id: string | null;
@@ -142,6 +149,21 @@ export const api = {
       "/api/invites",
       { method: "POST", body: JSON.stringify({ email }) }
     ),
+
+  /** Approve, edit-and-approve, or send a written item back. */
+  review: (
+    taskId: number,
+    action: ReviewAction,
+    payload: { answers?: Record<string, unknown>; reason?: string } = {}
+  ) =>
+    call<{
+      reviewed: true;
+      action: "approved" | "edited" | "rejected";
+      state: string;
+    }>(`/api/tasks/${taskId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ action, ...payload }),
+    }),
 
   acceptAgreement: () =>
     call<{ success: true }>("/api/agreement/accept", {

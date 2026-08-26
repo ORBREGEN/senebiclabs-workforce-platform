@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/middleware";
 import { supabaseAdmin } from "@/lib/supabase";
 import { FORBIDDEN, requireEligiblePool } from "@/lib/gate";
-import { findNextTask } from "@/lib/labelstudio";
+import { findNextTask, getTask } from "@/lib/labelstudio";
+import {
+  claimedTaskIds,
+  itemsAwaitingReview,
+  reviewRequired,
+} from "@/lib/review";
 import {
   buildContext,
   caseIdFor,
@@ -41,6 +46,50 @@ export async function GET(
     const seen = new Set<number>(flagged);
     for (const row of completions ?? []) seen.add(row.ls_task_id);
 
+    const raw0 = pool.evalConfig as RawEvalConfig | null;
+
+    // Written work is authored once and approved once. Reviewing is served
+    // ahead of authoring, so finished drafts do not queue up behind new ones.
+    if (reviewRequired(raw0)) {
+      const waiting = await itemsAwaitingReview(pool.id, auth.clinicianId);
+      const reviewable = waiting.find((i) => !seen.has(i.ls_task_id));
+
+      if (reviewable) {
+        let lsTask;
+        try {
+          lsTask = await getTask(reviewable.ls_task_id);
+        } catch (err) {
+          console.error(`[next] LS unreachable for review item`, err);
+          return NextResponse.json(
+            { error: "We could not reach the case store. Try again in a moment." },
+            { status: 502 }
+          );
+        }
+
+        const cfg = normalizeConfig(raw0);
+        const d = (lsTask.data ?? {}) as Record<string, unknown>;
+        return NextResponse.json({
+          phase: "review",
+          task_id: reviewable.ls_task_id,
+          pool: { id: pool.id, name: pool.name, purpose: cfg.purpose },
+          case_id: caseIdFor(raw0, d),
+          context: buildContext(raw0, d),
+          eval_config: {
+            instructions: cfg.instructions,
+            fields: cfg.fields,
+            classes: cfg.classes,
+          },
+          // What the author wrote. No identity — a reviewer judges the text.
+          authored: reviewable.authored_data,
+          revision: reviewable.revision,
+          already_reviewed_count: completions?.length ?? 0,
+        });
+      }
+
+      // Nothing to review: author something nobody has claimed.
+      for (const id of await claimedTaskIds(pool.id)) seen.add(id);
+    }
+
     let task;
     try {
       task = await findNextTask(pool.lsProjectId, seen, pool.maxAnnotations);
@@ -54,11 +103,12 @@ export async function GET(
 
     if (!task) return new NextResponse(null, { status: 204 });
 
-    const raw = pool.evalConfig as RawEvalConfig | null;
+    const raw = raw0;
     const config = normalizeConfig(raw);
     const data = (task.data ?? {}) as Record<string, unknown>;
 
     return NextResponse.json({
+      phase: reviewRequired(raw0) ? "author" : "single",
       task_id: task.id,
       pool: { id: pool.id, name: pool.name, purpose: config.purpose },
       case_id: caseIdFor(raw, data),

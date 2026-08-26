@@ -17,6 +17,7 @@ import {
   TranslationError,
   type RawEvalConfig,
 } from "@/lib/eval-config";
+import { recordAuthored, reviewRequired } from "@/lib/review";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,36 @@ export async function POST(
         { error: "Complete at least one field before submitting." },
         { status: 422 }
       );
+    }
+
+    // Written work is not published on submission. The draft is held until a
+    // second clinician approves it, so an unapproved answer never reaches Label
+    // Studio and never reaches whatever consumes that project's webhook.
+    if (reviewRequired(raw)) {
+      const claimed = await recordAuthored(
+        pool.id,
+        taskId,
+        auth.clinicianId,
+        answers
+      );
+
+      if (!claimed.ok) {
+        return NextResponse.json(
+          {
+            error:
+              "Another clinician has already written this one. The next case is ready.",
+          },
+          { status: 409 }
+        );
+      }
+
+      return NextResponse.json({
+        recorded: true,
+        phase: "author",
+        state: claimed.item.state,
+        awaiting_review: true,
+        next: await nextTaskFor(auth.clinicianId, pool, raw),
+      });
     }
 
     // The overlap ceiling was last checked when this task was served, which may

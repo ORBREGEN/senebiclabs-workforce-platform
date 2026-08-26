@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PurposeBadge } from "@/components/ui/Pill";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
-import { ApiError, NO_CONTENT, api, type Task } from "@/lib/api";
+import { ApiError, NO_CONTENT, api, type ReviewAction, type Task } from "@/lib/api";
+import { ReviewPanel } from "@/components/ReviewPanel";
 
 /** Answers survive a refresh. Only answers — never the session. */
 const draftKey = (taskId: number) => `senebiclabs:draft:${taskId}`;
@@ -192,6 +193,38 @@ function Workspace() {
     }
   }, [task, busy, visibleFields, answers, countReview, showToast, adopt]);
 
+  /** Approve, edit-and-approve, or send back. Advances like a submit does. */
+  const decide = useCallback(
+    async (action: ReviewAction, payload: { answers?: Record<string, unknown>; reason?: string } = {}) => {
+      if (!task || busy) return;
+      setBusy(true);
+      setSubmitError(null);
+      const reviewedId = task.task_id;
+
+      try {
+        const outcome = await api.review(reviewedId, action, payload);
+        clearDraft(reviewedId);
+        if (outcome.action !== "rejected") countReview();
+        showToast(
+          outcome.action === "rejected"
+            ? "Sent back to be rewritten"
+            : outcome.action === "edited"
+              ? "Your edit approved and delivered"
+              : "Approved and delivered"
+        );
+        await load();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (err) {
+        setSubmitError(
+          err instanceof ApiError ? err.message : "We could not record that decision."
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [task, busy, countReview, showToast, load]
+  );
+
   const flag = useCallback(async () => {
     if (!task || busy) return;
     setBusy(true);
@@ -307,6 +340,18 @@ function Workspace() {
             </Card>
           ))}
 
+          {task.phase === "review" ? (
+            <ReviewPanel
+              fields={task.eval_config.fields}
+              authored={task.authored ?? {}}
+              revision={task.revision ?? 0}
+              busy={busy}
+              error={submitError}
+              onApprove={() => decide("approve")}
+              onEdit={(edited) => decide("edit", { answers: edited })}
+              onReject={(reason) => decide("reject", { reason })}
+            />
+          ) : (
           <Card className="p-5">
             <h2 className="text-section text-ink">Your assessment</h2>
             <p className="mt-1 text-body text-muted">
@@ -360,6 +405,7 @@ function Workspace() {
               ))}
             </div>
           </Card>
+          )}
         </div>
 
         {instructions && (
@@ -369,6 +415,7 @@ function Workspace() {
         )}
       </div>
 
+      {task.phase !== "review" && (
       <div className="sticky bottom-0 z-10 -mx-5 mt-6 border-t border-hairline bg-surface/95 px-5 py-3 backdrop-blur lg:-mx-8 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-[12px] text-muted">
@@ -393,6 +440,7 @@ function Workspace() {
           </div>
         </div>
       </div>
+      )}
     </>
   );
 }
