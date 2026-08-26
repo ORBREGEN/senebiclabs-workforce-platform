@@ -76,11 +76,19 @@ export async function signInOrReject(
   const email = normalizeEmail(rawEmail);
 
   // 1. Already a member.
-  const { data: existing } = await supabaseAdmin
+  //
+  // Deliberately not maybeSingle: duplicate rows for one address used to make
+  // that error, which read as "no such member" and refused a real clinician for
+  // want of an invite. The oldest row wins, so a member keeps the account their
+  // history hangs off. Migration 005 stops duplicates arising.
+  const { data: matches } = await supabaseAdmin
     .from("clinicians")
     .select("id, email, active")
     .ilike("email", email)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  const existing = matches?.[0];
 
   if (existing) {
     if (existing.active === false) return { ok: false, reason: "inactive" };
