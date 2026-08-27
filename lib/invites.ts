@@ -1,6 +1,7 @@
 import "server-only";
 import { randomBytes } from "crypto";
 import { supabaseAdmin } from "./supabase";
+import { sendInviteEmail } from "./send-invite";
 
 /**
  * Invites.
@@ -113,4 +114,78 @@ export async function inviterName(invitedBy: string | null): Promise<string | nu
     .eq("id", invitedBy)
     .maybeSingle();
   return (data?.name as string | undefined) ?? null;
+}
+
+export type InviteFailure =
+  | { ok: false; status: number; error: string };
+
+/**
+ * Creates a single-use invite and emails the link.
+ *
+ * The one implementation behind both the clinician-facing endpoint and /ops, so
+ * an invite issued by an operator is the same object, with the same expiry and
+ * the same email, as one issued by a colleague.
+ *
+ * A send failure withdraws the invite: an invite whose link never arrived is
+ * worse than none, because the partial unique index would block a retry to the
+ * same address.
+ */
+export async function createAndSendInvite(
+  email: string,
+  inviterId: string | null,
+  inviterName: string
+): Promise<
+  | { ok: true; invite: { id: string; invited_email: string; expires_at: string | null; token: string } }
+  | InviteFailure
+> {
+  const address = normalizeEmail(email);
+
+  if (!/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(address)) {
+    return { ok: false, status: 400, error: "That does not look like an email address." };
+  }
+
+  const { data: existing } = await supabaseAdmin
+    .from("clinicians")
+    .select("id")
+    .ilike("email", address)
+    .maybeSingle();
+
+  if (existing) {
+    return { ok: false, status: 409, error: "That address already has an account." };
+  }
+
+  const token = newInviteToken();
+  const expiresAt = new Date(
+    Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const { data: invite, error } = await supabaseAdmin
+    .from("invites")
+    .insert({
+      token,
+      invited_email: address,
+      invited_by: inviterId,
+      status: "pending",
+      expires_at: expiresAt,
+    })
+    .select("id, token, invited_email, expires_at")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, status: 409, error: "That address already has an invite waiting." };
+    }
+    console.error("[invites] insert failed", error);
+    return { ok: false, status: 500, error: "We could not create that invite." };
+  }
+
+  try {
+    await sendInviteEmail(address, invite.token, inviterName);
+  } catch (err) {
+    console.error("[invites] send failed", err);
+    await supabaseAdmin.from("invites").update({ status: "revoked" }).eq("id", invite.id);
+    return { ok: false, status: 502, error: "We could not send that invite. Try again in a moment." };
+  }
+
+  return { ok: true, invite };
 }

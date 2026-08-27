@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth";
 import { SESSION_COOKIE } from "@/lib/session-cookie";
 import { supabaseAdmin } from "@/lib/supabase";
-import {
-  INVITE_TTL_DAYS,
-  newInviteToken,
-  normalizeEmail,
-} from "@/lib/invites";
-import { sendInviteEmail } from "@/lib/send-invite";
+import { createAndSendInvite, normalizeEmail } from "@/lib/invites";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +14,6 @@ export const dynamic = "force-dynamic";
  * turns the in-app invite UI on for them with no deploy — and the operator key
  * is how the first clinicians get invited before any member holds the flag.
  */
-
-const looksLikeEmail = (v: string) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v);
 
 async function resolveInviter(req: NextRequest): Promise<
   | { ok: true; inviterId: string | null; inviterName: string }
@@ -80,74 +73,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Malformed request." }, { status: 400 });
   }
 
-  if (!looksLikeEmail(email)) {
-    return NextResponse.json(
-      { error: "That does not look like an email address." },
-      { status: 400 }
-    );
+  const created = await createAndSendInvite(
+    email,
+    inviter.inviterId,
+    inviter.inviterName
+  );
+
+  if (!created.ok) {
+    return NextResponse.json({ error: created.error }, { status: created.status });
   }
 
-  // Already a member: an invite would be a dead link.
-  const { data: existing } = await supabaseAdmin
-    .from("clinicians")
-    .select("id")
-    .ilike("email", email)
-    .maybeSingle();
-
-  if (existing) {
-    return NextResponse.json(
-      { error: "That address already has an account." },
-      { status: 409 }
-    );
-  }
-
-  const token = newInviteToken();
-  const expiresAt = new Date(
-    Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
-  ).toISOString();
-
-  const { data: invite, error } = await supabaseAdmin
-    .from("invites")
-    .insert({
-      token,
-      invited_email: email,
-      invited_by: inviter.inviterId,
-      status: "pending",
-      expires_at: expiresAt,
-    })
-    .select("id, token, invited_email, expires_at")
-    .single();
-
-  if (error) {
-    // The partial unique index means one live invite per address.
-    if (error.code === "23505") {
-      return NextResponse.json(
-        { error: "That address already has an invite waiting." },
-        { status: 409 }
-      );
-    }
-    console.error("[invites] insert failed", error);
-    return NextResponse.json(
-      { error: "We could not create that invite." },
-      { status: 500 }
-    );
-  }
-
-  // The invite is worthless if the link never arrives, so a failed send is a
-  // failed invite — and the row is withdrawn rather than left blocking a retry.
-  try {
-    await sendInviteEmail(email, invite.token, inviter.inviterName);
-  } catch (err) {
-    console.error("[invites] send failed", err);
-    await supabaseAdmin
-      .from("invites")
-      .update({ status: "revoked" })
-      .eq("id", invite.id);
-    return NextResponse.json(
-      { error: "We could not send that invite. Try again in a moment." },
-      { status: 502 }
-    );
-  }
+  const invite = created.invite;
 
   return NextResponse.json({
     invited_email: invite.invited_email,
