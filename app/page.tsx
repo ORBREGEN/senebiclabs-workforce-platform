@@ -178,47 +178,47 @@ export default function Landing() {
       </header>
 
       <main>
-        {/* Hero: two columns, denser than a centred brochure */}
+        {/* Hero */}
         <section className="border-b border-hairline">
-          <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:py-20">
-            <div>
-              <p className="text-label uppercase text-accent">
-                For licensed clinicians
-              </p>
-              <h1
-                className="mt-3 max-w-[560px] text-[36px] leading-[1.15] text-ink sm:text-[46px]"
-                style={{ fontFamily: "var(--font-serif)", fontWeight: 600 }}
-              >
-                Medical AI is measured against clinical judgment. Yours.
-              </h1>
-              <p className="mt-5 max-w-[500px] text-[17px] leading-relaxed text-muted">
-                Review what medical AI says in your specialty, confirm it or
-                correct it, and flag what it misses. Remote, on your schedule,
-                paid for your expertise.
-              </p>
+          <div className="mx-auto max-w-[1100px] px-5 py-16 text-center lg:px-8 lg:py-20">
+            <p className="text-label uppercase text-accent">
+              For licensed clinicians
+            </p>
+            <h1
+              className="mx-auto mt-3 max-w-[720px] text-[36px] leading-[1.15] text-ink sm:text-[46px]"
+              style={{ fontFamily: "var(--font-serif)", fontWeight: 600 }}
+            >
+              Medical AI is measured against clinical judgment. Yours.
+            </h1>
+            <p className="mx-auto mt-5 max-w-[540px] text-[17px] leading-relaxed text-muted">
+              Review what medical AI says in your specialty, confirm it or
+              correct it, and flag what it misses. Remote, on your schedule,
+              paid for your expertise.
+            </p>
 
-              <div className="mt-7">
-                <ApplyActions align="start" />
-              </div>
-
-              <p className="mt-4 text-[13px] text-muted">
-                Membership is vetted. Apply, and we send an invitation to the
-                clinicians we can offer work to.
-              </p>
+            <div className="mt-7">
+              <ApplyActions />
             </div>
 
-            <FlowVisual />
+            <p className="mt-4 text-[13px] text-muted">
+              Membership is vetted. Apply, and we send an invitation to the
+              clinicians we can offer work to.
+            </p>
+
+            <div className="mx-auto mt-12 max-w-[560px] text-left">
+              <FlowVisual />
+            </div>
           </div>
         </section>
 
         {/* How it works */}
         <section className="border-b border-hairline bg-canvas">
           <div className="mx-auto max-w-[1100px] px-5 py-16 lg:px-8">
-            <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="text-center">
               <h2 className="text-[26px] font-semibold leading-tight text-ink">
                 How it works
               </h2>
-              <p className="text-body text-muted">
+              <p className="mx-auto mt-3 max-w-[460px] text-body text-muted">
                 Four steps from applying to your first case.
               </p>
             </div>
@@ -250,11 +250,11 @@ export default function Landing() {
         {/* Why join */}
         <section className="border-b border-hairline">
           <div className="mx-auto max-w-[1100px] px-5 py-16 lg:px-8">
-            <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="text-center">
               <h2 className="text-[26px] font-semibold leading-tight text-ink">
                 Why clinicians do this work
               </h2>
-              <p className="text-body text-muted">
+              <p className="mx-auto mt-3 max-w-[500px] text-body text-muted">
                 It pays, it fits around practice, and it changes what these
                 systems tell people.
               </p>
@@ -279,18 +279,18 @@ export default function Landing() {
 
         {/* Requirements */}
         <section className="border-b border-hairline bg-canvas">
-          <div className="mx-auto grid max-w-[1100px] gap-8 px-5 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:px-8">
-            <div>
+          <div className="mx-auto max-w-[1100px] px-5 py-16 lg:px-8">
+            <div className="text-center">
               <h2 className="text-[26px] font-semibold leading-tight text-ink">
                 What we ask for
               </h2>
-              <p className="mt-3 max-w-[380px] text-body text-muted">
+              <p className="mx-auto mt-3 max-w-[440px] text-body text-muted">
                 The bar is clinical experience. There is nothing to buy and no
                 training to complete first.
               </p>
             </div>
 
-            <ul className="space-y-2.5">
+            <ul className="mx-auto mt-8 max-w-[560px] space-y-2.5">
               {REQUIREMENTS.map((r) => (
                 <li
                   key={r}
@@ -313,12 +313,12 @@ export default function Landing() {
 
         {/* FAQ */}
         <section className="border-b border-hairline">
-          <div className="mx-auto grid max-w-[1100px] gap-8 px-5 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14 lg:px-8">
-            <h2 className="text-[26px] font-semibold leading-tight text-ink">
+          <div className="mx-auto max-w-[1100px] px-5 py-16 lg:px-8">
+            <h2 className="text-center text-[26px] font-semibold leading-tight text-ink">
               Questions clinicians ask
             </h2>
 
-            <div className="space-y-2.5">
+            <div className="mx-auto mt-8 max-w-[720px] space-y-2.5">
               {FAQ.map((item) => (
                 <details
                   key={item.q}
@@ -371,9 +371,9 @@ export default function Landing() {
       </main>
 
       <footer className="border-t border-hairline">
-        <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-3 px-5 py-8 text-[13px] text-muted sm:flex-row lg:px-8">
-          <span>Senebiclabs</span>
-          <span>Clinical review platform for licensed clinicians</span>
+        <div className="mx-auto max-w-[1100px] px-5 py-8 text-center text-[13px] text-muted lg:px-8">
+          <p className="font-medium text-ink">Senebiclabs</p>
+          <p className="mt-1">Clinical review platform for licensed clinicians</p>
         </div>
       </footer>
     </div>
