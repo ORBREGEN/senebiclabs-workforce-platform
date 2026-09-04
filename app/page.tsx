@@ -19,7 +19,7 @@ import { Testimonials } from "@/components/landing/Testimonials";
 export const metadata: Metadata = {
   title: "Senebiclabs for clinicians",
   description:
-    "Licensed clinicians review medical AI against clinical guidelines. Remote, flexible, paid expert review. Membership is vetted and by invitation.",
+    "Paid remote work for licensed clinicians. Apply your clinical knowledge to reviewing medical AI, on your own schedule. Membership is vetted and by invitation.",
 };
 
 const STEPS = [
@@ -47,9 +47,9 @@ const STEPS = [
 
 const BENEFITS = [
   {
-    icon: Stethoscope,
-    title: "Your judgment is the standard",
-    body: "Medical AI is measured against what experienced clinicians say is correct. That reference has to come from someone.",
+    icon: Wallet,
+    title: "Paid for what you already know",
+    body: "Paid per reviewed case, at professional rates, with the rate visible before you take anything on.",
   },
   {
     icon: CalendarClock,
@@ -57,9 +57,9 @@ const BENEFITS = [
     body: "No shifts and no minimum hours. Pick up cases when you have time and stop when you do not.",
   },
   {
-    icon: Wallet,
-    title: "Paid for your expertise",
-    body: "Paid per reviewed task, at professional rates, with the rate visible before you take anything on.",
+    icon: Stethoscope,
+    title: "Work inside your specialty",
+    body: "You review in the areas you actually practise, against the guidelines you already work to.",
   },
   {
     icon: Scale,
@@ -73,7 +73,7 @@ const BENEFITS = [
   },
   {
     icon: Globe,
-    title: "Work that carries",
+    title: "Your judgment is the standard",
     body: "A correction you make today shapes how a model answers the same question for everyone who asks it next.",
   },
 ];
@@ -188,12 +188,13 @@ export default function Landing() {
               className="mx-auto mt-3 max-w-[720px] text-[36px] leading-[1.15] text-ink sm:text-[46px]"
               style={{ fontFamily: "var(--font-serif)", fontWeight: 600 }}
             >
-              Medical AI is measured against clinical judgment. Yours.
+              Get paid to apply your clinical knowledge.
             </h1>
-            <p className="mx-auto mt-5 max-w-[540px] text-[17px] leading-relaxed text-muted">
+            <p className="mx-auto mt-5 max-w-[560px] text-[17px] leading-relaxed text-muted">
               Review what medical AI says in your specialty, confirm it or
-              correct it, and flag what it misses. Remote, on your schedule,
-              paid for your expertise.
+              correct it, and flag what it misses. Remote work, on your own
+              schedule, paid per case. Your judgment is what these systems are
+              measured against.
             </p>
 
             <div className="mt-7">
@@ -255,8 +256,8 @@ export default function Landing() {
                 Why clinicians do this work
               </h2>
               <p className="mx-auto mt-3 max-w-[500px] text-body text-muted">
-                It pays, it fits around practice, and it changes what these
-                systems tell people.
+                Paid work that fits around clinical practice, and that changes
+                what these systems tell people.
               </p>
             </div>
 
@@ -348,7 +349,7 @@ export default function Landing() {
         <section className="bg-canvas">
           <div className="mx-auto max-w-[1100px] px-5 py-16 text-center lg:px-8">
             <h2 className="mx-auto max-w-[540px] text-[26px] font-semibold leading-tight text-ink">
-              Put your clinical judgment behind the answers people receive
+              Put your clinical knowledge to paid work
             </h2>
             <p className="mx-auto mt-3 max-w-[460px] text-body text-muted">
               Apply with your specialty and licence. We review every application.
