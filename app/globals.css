@@ -26,6 +26,8 @@
 
   /* ---- Type ------------------------------------------------------- */
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Landing hero headlines only; the application never uses it. */
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
 
   --text-title: 24px;
   --text-title--line-height: 1.3;
