@@ -1,26 +1,26 @@
 import type { Metadata } from "next";
 import {
+  ArrowRight,
   CalendarClock,
   CheckCircle2,
   ClipboardCheck,
   FileSearch,
   Globe,
   Lock,
-  ScrollText,
   Scale,
+  ScrollText,
   Stethoscope,
   Wallet,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { ApplyActions } from "@/components/landing/ApplyDialog";
+import { Testimonials } from "@/components/landing/Testimonials";
 
 export const metadata: Metadata = {
   title: "Senebiclabs for clinicians",
   description:
     "Licensed clinicians review medical AI against clinical guidelines. Remote, flexible, paid expert review. Membership is vetted and by invitation.",
 };
-
-/* ── content ─────────────────────────────────────────────────────── */
 
 const STEPS = [
   {
@@ -31,17 +31,17 @@ const STEPS = [
   {
     icon: ClipboardCheck,
     title: "Get vetted",
-    body: "We check your credentials and ask you to complete a short calibration in your specialty.",
+    body: "We check your credentials and ask for a short calibration in your specialty.",
   },
   {
     icon: FileSearch,
-    title: "Review in your specialty",
-    body: "Work through cases from anywhere, on your own schedule, in the areas you actually practise.",
+    title: "Review",
+    body: "Work through cases from anywhere, on your own schedule, in the areas you practise.",
   },
   {
     icon: Wallet,
     title: "Get paid",
-    body: "You are paid per reviewed task. The rate is shown before you accept any work.",
+    body: "Paid per reviewed task, at a rate shown before you accept any work.",
   },
 ];
 
@@ -49,27 +49,27 @@ const BENEFITS = [
   {
     icon: Stethoscope,
     title: "Your judgment is the standard",
-    body: "Medical AI is measured against what experienced clinicians say is correct. That reference has to come from someone, and it comes from you.",
+    body: "Medical AI is measured against what experienced clinicians say is correct. That reference has to come from someone.",
   },
   {
     icon: CalendarClock,
     title: "Remote and flexible",
-    body: "There are no shifts and no minimum hours. Pick up cases when you have time and stop when you do not.",
+    body: "No shifts and no minimum hours. Pick up cases when you have time and stop when you do not.",
   },
   {
     icon: Wallet,
     title: "Paid for your expertise",
-    body: "Work is paid per reviewed task, at professional rates, with the rate visible before you take anything on.",
+    body: "Paid per reviewed task, at professional rates, with the rate visible before you take anything on.",
   },
   {
     icon: Scale,
     title: "Real clinical rigour",
-    body: "Several clinicians review each case and disagreements are adjudicated. This is considered work, not volume piecework.",
+    body: "Several clinicians see each case and disagreements are adjudicated. Considered work, not volume piecework.",
   },
   {
     icon: Lock,
     title: "Confidential by design",
-    body: "Case material stays inside the platform. You see only the pools you have been given, and nothing leaves with you.",
+    body: "Case material stays inside the platform. You see only the pools you have been given.",
   },
   {
     icon: Globe,
@@ -92,7 +92,7 @@ const FAQ = [
   },
   {
     q: "How does pay work?",
-    a: "You are paid per reviewed task. The rate for a body of work is shown before you accept it, so you always know what a case pays before you begin. Reviews that you flag as unclear are paid the same as reviews you complete.",
+    a: "You are paid per reviewed task. The rate for a body of work is shown before you accept it, so you always know what a case pays before you begin. Reviews you flag as unclear are paid the same as reviews you complete.",
   },
   {
     q: "How much time does it take?",
@@ -100,32 +100,77 @@ const FAQ = [
   },
   {
     q: "Which specialties do you work with?",
-    a: "A range, and it changes as new work arrives. If your specialty is not needed right now we will keep your application on file rather than turning you away.",
+    a: "A range, and it changes as new work arrives. If your specialty is not needed right now we keep your application on file rather than turning you away.",
   },
   {
     q: "Where do I need to be?",
     a: "Anywhere with a reliable connection. The work is fully remote and you choose your own hours.",
   },
   {
-    q: "What does a review actually involve?",
+    q: "What does a review involve?",
     a: "You read a case and the answer a model gave, judge it against the guidelines you already work to, confirm or correct it, and flag anything clinically unsafe. The rubric sits beside the case while you work.",
   },
 ];
 
-/* ── page ────────────────────────────────────────────────────────── */
+/** The hero's visual: the shape of the work, without inventing a case. */
+function FlowVisual() {
+  const stages = [
+    { label: "A case arrives", tone: "muted" },
+    { label: "You judge it against guidelines", tone: "accent" },
+    { label: "Disagreements are adjudicated", tone: "muted" },
+    { label: "The answer becomes the standard", tone: "muted" },
+  ];
+
+  return (
+    <div
+      aria-hidden="true"
+      className="rounded-card border border-hairline bg-surface p-5 shadow-[0_1px_3px_rgba(16,49,46,0.06)]"
+    >
+      <p className="text-label uppercase text-muted">How a case moves</p>
+      <ol className="mt-4 space-y-2.5">
+        {stages.map((s, i) => (
+          <li
+            key={s.label}
+            className={`flex items-center gap-3 rounded-card border px-4 py-3 ${
+              s.tone === "accent"
+                ? "border-accent bg-accent-soft"
+                : "border-hairline bg-canvas"
+            }`}
+          >
+            <span
+              className={`tnum flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
+                s.tone === "accent"
+                  ? "bg-accent text-white"
+                  : "bg-surface text-muted"
+              }`}
+            >
+              {i + 1}
+            </span>
+            <span
+              className={`text-body ${
+                s.tone === "accent" ? "font-medium text-ink" : "text-muted"
+              }`}
+            >
+              {s.label}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-canvas">
-      {/* Top bar */}
-      <header className="border-b border-hairline bg-surface">
+    <div className="min-h-screen bg-surface">
+      <header className="sticky top-0 z-40 border-b border-hairline bg-surface/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-5 lg:px-8">
           <span className="text-[15px] font-semibold tracking-tight text-ink">
             Senebiclabs
           </span>
           <a
             href="/login"
-            className="focusable rounded-btn px-2 py-1 text-body font-medium text-ink transition-colors hover:text-accent"
+            className="focusable rounded-btn px-2.5 py-1.5 text-body font-medium text-ink transition-colors hover:text-accent"
           >
             Sign in
           </a>
@@ -133,83 +178,89 @@ export default function Landing() {
       </header>
 
       <main>
-        {/* Hero */}
-        <section className="border-b border-hairline bg-surface">
-          <div className="mx-auto max-w-[1100px] px-5 py-20 text-center lg:px-8 lg:py-28">
-            <p className="text-label uppercase text-accent">
-              For licensed clinicians
-            </p>
-            <h1
-              className="mx-auto mt-4 max-w-[760px] font-serif text-[34px] leading-[1.2] text-ink sm:text-[44px]"
-              style={{ fontFamily: "var(--font-serif)" }}
-            >
-              Medical AI is measured against clinical judgment. Yours.
-            </h1>
-            <p className="mx-auto mt-5 max-w-[560px] text-[17px] leading-relaxed text-muted">
-              Review what medical AI says in your specialty, confirm it or correct
-              it, and flag what it misses. Remote, on your schedule, paid for your
-              expertise.
-            </p>
+        {/* Hero: two columns, denser than a centred brochure */}
+        <section className="border-b border-hairline">
+          <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:py-20">
+            <div>
+              <p className="text-label uppercase text-accent">
+                For licensed clinicians
+              </p>
+              <h1
+                className="mt-3 max-w-[560px] text-[36px] leading-[1.15] text-ink sm:text-[46px]"
+                style={{ fontFamily: "var(--font-serif)", fontWeight: 600 }}
+              >
+                Medical AI is measured against clinical judgment. Yours.
+              </h1>
+              <p className="mt-5 max-w-[500px] text-[17px] leading-relaxed text-muted">
+                Review what medical AI says in your specialty, confirm it or
+                correct it, and flag what it misses. Remote, on your schedule,
+                paid for your expertise.
+              </p>
 
-            <div className="mt-8">
-              <ApplyActions />
+              <div className="mt-7">
+                <ApplyActions align="start" />
+              </div>
+
+              <p className="mt-4 text-[13px] text-muted">
+                Membership is vetted. Apply, and we send an invitation to the
+                clinicians we can offer work to.
+              </p>
             </div>
 
-            <p className="mt-5 text-[13px] text-muted">
-              Membership is vetted. Apply, and we send an invitation to the
-              clinicians we can offer work to.
-            </p>
+            <FlowVisual />
           </div>
         </section>
 
         {/* How it works */}
-        <section className="mx-auto max-w-[1100px] px-5 py-20 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-[26px] font-semibold leading-tight text-ink">
-              How it works
-            </h2>
-            <p className="mx-auto mt-3 max-w-[520px] text-body text-muted">
-              Four steps from applying to reviewing your first case.
-            </p>
-          </div>
-
-          <ol className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, i) => (
-              <li key={step.title}>
-                <Card className="h-full p-5">
-                  <div className="flex items-center gap-3">
-                    <span
-                      aria-hidden="true"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent"
-                    >
-                      <step.icon size={17} />
-                    </span>
-                    <span className="tnum text-label uppercase text-muted">
-                      Step {i + 1}
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-section text-ink">{step.title}</h3>
-                  <p className="mt-1.5 text-body text-muted">{step.body}</p>
-                </Card>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        {/* Why join */}
-        <section className="border-y border-hairline bg-surface">
-          <div className="mx-auto max-w-[1100px] px-5 py-20 lg:px-8">
-            <div className="text-center">
+        <section className="border-b border-hairline bg-canvas">
+          <div className="mx-auto max-w-[1100px] px-5 py-16 lg:px-8">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <h2 className="text-[26px] font-semibold leading-tight text-ink">
-                Why clinicians do this work
+                How it works
               </h2>
-              <p className="mx-auto mt-3 max-w-[520px] text-body text-muted">
-                It pays, it fits around clinical practice, and it changes what
-                these systems tell people.
+              <p className="text-body text-muted">
+                Four steps from applying to your first case.
               </p>
             </div>
 
-            <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <ol className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {STEPS.map((step, i) => (
+                <li key={step.title}>
+                  <Card className="h-full p-5">
+                    <div className="flex items-center justify-between">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent"
+                      >
+                        <step.icon size={17} />
+                      </span>
+                      <span className="tnum text-[26px] font-semibold leading-none text-hairline">
+                        {i + 1}
+                      </span>
+                    </div>
+                    <h3 className="mt-4 text-section text-ink">{step.title}</h3>
+                    <p className="mt-1.5 text-body text-muted">{step.body}</p>
+                  </Card>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* Why join */}
+        <section className="border-b border-hairline">
+          <div className="mx-auto max-w-[1100px] px-5 py-16 lg:px-8">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <h2 className="text-[26px] font-semibold leading-tight text-ink">
+                Why clinicians do this work
+              </h2>
+              <p className="text-body text-muted">
+                It pays, it fits around practice, and it changes what these
+                systems tell people.
+              </p>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               {BENEFITS.map((b) => (
                 <Card key={b.title} className="h-full p-5">
                   <span
@@ -226,149 +277,95 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* What the work looks like */}
-        <section className="mx-auto max-w-[1100px] px-5 py-20 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-[26px] font-semibold leading-tight text-ink">
-              What a review looks like
-            </h2>
-            <p className="mx-auto mt-3 max-w-[540px] text-body text-muted">
-              One case at a time, with the rubric beside it. Nothing is timed and
-              nothing forces a guess.
-            </p>
-          </div>
-
-          <Card className="mx-auto mt-12 max-w-[820px] overflow-hidden p-0">
-            <div className="border-b border-hairline px-5 py-3">
-              <p className="text-label uppercase text-muted">
-                Illustration of a single case
-              </p>
-            </div>
-
-            <div className="space-y-5 p-5">
-              <div>
-                <p className="text-label uppercase text-muted">
-                  Clinical scenario
-                </p>
-                <p className="mt-1.5 text-body leading-relaxed text-ink">
-                  A 34 year old presents with three days of productive cough and a
-                  low grade fever. No chest pain, no breathlessness at rest.
-                </p>
-              </div>
-
-              <div className="rounded-card border-l-2 border-l-accent bg-canvas px-4 py-3">
-                <p className="text-label uppercase text-muted">Model output</p>
-                <p className="mt-1.5 text-body leading-relaxed text-ink">
-                  Likely a viral upper respiratory infection. Supportive care and
-                  review if symptoms persist beyond ten days.
-                </p>
-              </div>
-
-              <div className="border-t border-hairline pt-5">
-                <p className="text-label uppercase text-muted">Your assessment</p>
-                <ul className="mt-3 space-y-2.5">
-                  {[
-                    "Is this answer accurate against the guidelines you work to",
-                    "Correct the wording where it is wrong, in your own words",
-                    "Flag anything clinically unsafe that the answer missed",
-                    "Say how confident you are, and flag the case if it is outside your area",
-                  ].map((line) => (
-                    <li key={line} className="flex items-start gap-2.5">
-                      <CheckCircle2
-                        size={16}
-                        aria-hidden="true"
-                        className="mt-0.5 shrink-0 text-accent"
-                      />
-                      <span className="text-body text-muted">{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <p className="border-t border-hairline bg-canvas px-5 py-3 text-[13px] text-muted">
-              Several clinicians see each case. Where you disagree, the case goes
-              to adjudication rather than to a majority vote.
-            </p>
-          </Card>
-        </section>
-
         {/* Requirements */}
-        <section className="border-y border-hairline bg-surface">
-          <div className="mx-auto max-w-[1100px] px-5 py-20 lg:px-8">
-            <div className="mx-auto max-w-[620px] text-center">
+        <section className="border-b border-hairline bg-canvas">
+          <div className="mx-auto grid max-w-[1100px] gap-8 px-5 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:px-8">
+            <div>
               <h2 className="text-[26px] font-semibold leading-tight text-ink">
                 What we ask for
               </h2>
-              <p className="mt-3 text-body text-muted">
+              <p className="mt-3 max-w-[380px] text-body text-muted">
                 The bar is clinical experience. There is nothing to buy and no
                 training to complete first.
               </p>
-
-              <ul className="mt-10 space-y-3 text-left">
-                {REQUIREMENTS.map((r) => (
-                  <li
-                    key={r}
-                    className="flex items-start gap-3 rounded-card border border-hairline bg-canvas px-4 py-3"
-                  >
-                    <CheckCircle2
-                      size={17}
-                      aria-hidden="true"
-                      className="mt-0.5 shrink-0 text-accent"
-                    />
-                    <span className="text-body text-ink">{r}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
+
+            <ul className="space-y-2.5">
+              {REQUIREMENTS.map((r) => (
+                <li
+                  key={r}
+                  className="flex items-start gap-3 rounded-card border border-hairline bg-surface px-4 py-3.5"
+                >
+                  <CheckCircle2
+                    size={17}
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-accent"
+                  />
+                  <span className="text-body text-ink">{r}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
+        {/* Renders only once real quotes exist. */}
+        <Testimonials />
+
         {/* FAQ */}
-        <section className="mx-auto max-w-[1100px] px-5 py-20 lg:px-8">
-          <div className="text-center">
+        <section className="border-b border-hairline">
+          <div className="mx-auto grid max-w-[1100px] gap-8 px-5 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14 lg:px-8">
             <h2 className="text-[26px] font-semibold leading-tight text-ink">
               Questions clinicians ask
             </h2>
-          </div>
 
-          <div className="mx-auto mt-12 max-w-[720px] space-y-3">
-            {FAQ.map((item) => (
-              <details
-                key={item.q}
-                className="group rounded-card border border-hairline bg-surface"
-              >
-                <summary className="focusable cursor-pointer list-none px-5 py-4 text-body font-medium text-ink marker:hidden">
-                  <span className="flex items-center justify-between gap-4">
-                    {item.q}
-                    <span
-                      aria-hidden="true"
-                      className="shrink-0 text-muted transition-transform duration-150 group-open:rotate-45"
-                    >
-                      +
+            <div className="space-y-2.5">
+              {FAQ.map((item) => (
+                <details
+                  key={item.q}
+                  className="group rounded-card border border-hairline bg-surface"
+                >
+                  <summary className="focusable cursor-pointer list-none px-5 py-4 text-body font-medium text-ink marker:hidden">
+                    <span className="flex items-center justify-between gap-4">
+                      {item.q}
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 text-muted transition-transform duration-150 group-open:rotate-45"
+                      >
+                        +
+                      </span>
                     </span>
-                  </span>
-                </summary>
-                <p className="border-t border-hairline px-5 py-4 text-body leading-relaxed text-muted">
-                  {item.a}
-                </p>
-              </details>
-            ))}
+                  </summary>
+                  <p className="border-t border-hairline px-5 py-4 text-body leading-relaxed text-muted">
+                    {item.a}
+                  </p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* Final CTA */}
-        <section className="border-t border-hairline bg-surface">
-          <div className="mx-auto max-w-[1100px] px-5 py-20 text-center lg:px-8">
-            <h2 className="mx-auto max-w-[560px] text-[26px] font-semibold leading-tight text-ink">
+        <section className="bg-canvas">
+          <div className="mx-auto max-w-[1100px] px-5 py-16 text-center lg:px-8">
+            <h2 className="mx-auto max-w-[540px] text-[26px] font-semibold leading-tight text-ink">
               Put your clinical judgment behind the answers people receive
             </h2>
-            <p className="mx-auto mt-3 max-w-[500px] text-body text-muted">
+            <p className="mx-auto mt-3 max-w-[460px] text-body text-muted">
               Apply with your specialty and licence. We review every application.
             </p>
-            <div className="mt-8">
+            <div className="mt-7">
               <ApplyActions />
             </div>
+            <p className="mt-5 inline-flex items-center gap-1.5 text-[13px] text-muted">
+              Already a member
+              <a
+                href="/login"
+                className="focusable inline-flex items-center gap-1 rounded-btn font-medium text-accent underline-offset-2 hover:underline"
+              >
+                Sign in
+                <ArrowRight size={13} aria-hidden="true" />
+              </a>
+            </p>
           </div>
         </section>
       </main>

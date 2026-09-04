@@ -1,0 +1,51 @@
+import { Card } from "@/components/ui/Card";
+
+/**
+ * Clinician quotes.
+ *
+ * Empty until real ones exist. The section renders nothing while the list is
+ * empty, so the page never ships an invented quote or a visible placeholder.
+ *
+ * To add one, append an entry below. Each needs a real clinician who has agreed
+ * to be quoted by name and specialty.
+ */
+export interface Quote {
+  quote: string;
+  name: string;
+  credential: string;
+  specialty: string;
+}
+
+export const QUOTES: Quote[] = [
+  // { quote: "…", name: "Dr …", credential: "MD", specialty: "Internal medicine" },
+];
+
+export function Testimonials() {
+  if (QUOTES.length === 0) return null;
+
+  return (
+    <section className="border-t border-hairline bg-canvas">
+      <div className="mx-auto max-w-[1100px] px-5 py-16 lg:px-8">
+        <h2 className="text-center text-[26px] font-semibold leading-tight text-ink">
+          From clinicians on the platform
+        </h2>
+
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {QUOTES.map((q) => (
+            <Card key={q.name} className="h-full p-5">
+              <blockquote className="text-body leading-relaxed text-ink">
+                {q.quote}
+              </blockquote>
+              <footer className="mt-4 border-t border-hairline pt-3">
+                <p className="text-body font-medium text-ink">{q.name}</p>
+                <p className="text-[13px] text-muted">
+                  {q.credential}, {q.specialty}
+                </p>
+              </footer>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -195,12 +195,23 @@ export function ApplyDialog({
 }
 
 /** The page's calls to action, which need the dialog's state. */
-export function ApplyActions() {
+export function ApplyActions({
+  align = "center",
+}: {
+  /** The hero sets these left; the closing band centres them. */
+  align?: "center" | "start";
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <div
+        className={`flex flex-col gap-3 sm:flex-row ${
+          align === "start"
+            ? "items-stretch sm:items-center sm:justify-start"
+            : "items-center justify-center"
+        }`}
+      >
         <Button size="lg" className="w-full sm:w-auto" onClick={() => setOpen(true)}>
           Apply to join
         </Button>
